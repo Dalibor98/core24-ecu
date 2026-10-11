@@ -1,0 +1,159 @@
+@page "/admin/orders/{id:guid}"
+@model Core24.Web.Pages.Admin.OrderModel
+@inject Microsoft.Extensions.Options.IOptions<AppOptions> App
+@{
+    var o = Model.Order;
+    ViewData["Title"] = $"Order {o.Reference}";
+    var editable = o.Status is OrderStatus.Submitted or OrderStatus.InProgress;
+}
+<div class="head">
+    <p class="eyebrow"><a asp-page="/Admin/Index">Orders</a> / <span class="mono">@o.Reference</span></p>
+    <h1>@o.VehicleMake @o.VehicleModel</h1>
+    <partial name="_StatusSteps" model="o.Status" />
+</div>
+
+@if (Model.Flash is not null)
+{
+    <div class="notice">@Model.Flash</div>
+}
+
+<div class="grid2">
+    <section class="card">
+        <h2>Customer</h2>
+        <dl class="facts">
+            <dt>Name</dt><dd>@o.CustomerName</dd>
+            <dt>Email</dt><dd><a href="mailto:@o.CustomerEmail">@o.CustomerEmail</a></dd>
+            @if (o.CustomerPhone is not null)
+            {
+                <dt>Phone</dt><dd>@o.CustomerPhone</dd>
+            }
+            <dt>Account</dt><dd>@(o.UserId is null ? "Guest" : "Registered")</dd>
+            <dt>Received</dt><dd>@o.CreatedAtUtc.ToString("d MMM yyyy HH:mm") UTC</dd>
+            @if (o.CustomerNote is not null)
+            {
+                <dt>Message</dt><dd>@o.CustomerNote</dd>
+            }
+        </dl>
+        <p class="hint">Customer's private link (to send by hand if needed):<br><span class="mono">@App.Value.Link($"/o/{o.AccessToken}")</span></p>
+    </section>
+
+    <section class="card">
+        <h2>Ordered</h2>
+        <table>
+            @foreach (var item in o.Items)
+            {
+                <tr><td>@item.ModName</td><td class="num">@Money.Format(item.PriceCents, o.Currency)</td></tr>
+            }
+            <tr class="total"><td>Total</td><td class="num">@Money.Format(o.TotalCents, o.Currency)</td></tr>
+        </table>
+        @if (o.Vin is not null)
+        {
+            <dl class="facts"><dt>VIN</dt><dd class="mono">@o.Vin @(Vin.MakeFromWmi(o.Vin) is { } make ? $"({make})" : "")</dd></dl>
+        }
+    </section>
+</div>
+
+<section class="card">
+    <h2>Customer's files</h2>
+    <ul class="files">
+        @foreach (var f in o.OriginalFiles)
+        {
+            <li>
+                <span class="name">@f.FileName</span>
+                <span class="muted mono">@((f.SizeBytes / 1024.0).ToString("N0")) KB · MD5 @f.Md5</span>
+                @if (f.EcuType is not null)
+                {
+                    <span>@EcuFileName.DescribeEcu(f.EcuType) · @EcuFileName.DescribeMemory(f.MemoryArea) · @EcuFileName.DescribeReadMethod(f.ReadMethod)</span>
+                }
+                @switch (f.NameChecksumMatches)
+                {
+                    case true: <span class="muted">Checksum in the name matches the file.</span> break;
+                    case false: <span class="notice warn">Checksum in the name does NOT match. Damaged in transfer, or already modified?</span> break;
+                    default: <span class="muted">No checksum in the file name.</span> break;
+                }
+                <span><a class="btn small" href="/admin/files/@f.Id">Download original</a></span>
+            </li>
+        }
+    </ul>
+</section>
+
+<section class="card">
+    <h2>Modified files</h2>
+    @if (o.ModifiedFiles.Any())
+    {
+        <ul class="files">
+            @foreach (var f in o.ModifiedFiles)
+            {
+                <li>
+                    <span class="name">@f.FileName</span>
+                    <span class="muted mono">@((f.SizeBytes / 1024.0).ToString("N0")) KB · MD5 @f.Md5</span>
+                    <span class="actions">
+                        <a class="btn small" href="/admin/files/@f.Id">Download</a>
+                        @if (editable)
+                        {
+                            <form method="post" asp-page-handler="DeleteFile" asp-route-id="@o.Id" asp-route-fileId="@f.Id">
+                                <button class="btn small danger" type="submit">Remove</button>
+                            </form>
+                        }
+                    </span>
+                </li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p class="muted">None yet.</p>
+    }
+
+    @if (editable)
+    {
+        <form method="post" enctype="multipart/form-data" asp-page-handler="Upload" asp-route-id="@o.Id" class="stack">
+            <div class="field">
+                <label for="modifiedFiles">Upload modified file(s)</label>
+                <input id="modifiedFiles" name="modifiedFiles" type="file" multiple required>
+            </div>
+            <div class="actions"><button class="btn" type="submit">Upload</button></div>
+        </form>
+    }
+</section>
+
+<section class="card">
+    <h2>Actions</h2>
+    <div class="actions">
+        @if (o.Status == OrderStatus.Submitted)
+        {
+            <form method="post" asp-page-handler="Start" asp-route-id="@o.Id"><button class="btn" type="submit">Start work</button></form>
+        }
+        @if (editable)
+        {
+            <form method="post" asp-page-handler="Ready" asp-route-id="@o.Id">
+                <button class="btn primary" type="submit" disabled="@(!o.ModifiedFiles.Any())">Mark ready &amp; ask for payment</button>
+            </form>
+        }
+        @if (o.Status is OrderStatus.Submitted or OrderStatus.InProgress or OrderStatus.Ready)
+        {
+            <form method="post" asp-page-handler="Cancel" asp-route-id="@o.Id" onsubmit="return confirm('Cancel this order?')">
+                <button class="btn danger" type="submit">Cancel order</button>
+            </form>
+        }
+        @if (o.Status == OrderStatus.Paid)
+        {
+            <p>Paid @o.PaidAtUtc?.ToString("d MMM yyyy HH:mm") UTC · downloaded @o.DownloadCount time(s).</p>
+        }
+    </div>
+    @if (o.Payments.Count > 0)
+    {
+        <table>
+            <thead><tr><th>Payment</th><th>Started</th><th>Status</th><th class="num">Amount</th></tr></thead>
+            @foreach (var p in o.Payments.OrderBy(p => p.CreatedAtUtc))
+            {
+                <tr>
+                    <td class="mono">@p.Provider · @p.SessionId</td>
+                    <td>@p.CreatedAtUtc.ToString("d MMM HH:mm")</td>
+                    <td>@p.Status</td>
+                    <td class="num">@Money.Format(p.AmountCents, p.Currency)</td>
+                </tr>
+            }
+        </table>
+    }
+</section>

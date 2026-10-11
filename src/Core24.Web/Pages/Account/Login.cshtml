@@ -1,0 +1,38 @@
+@page "/account/login"
+@model Core24.Web.Pages.Account.LoginModel
+@{
+    ViewData["Title"] = "Log in";
+}
+<div class="head">
+    <p class="eyebrow">Account</p>
+    <h1>Log in</h1>
+    <p class="lede">You don't need an account to order: your order link arrives by email. <a asp-page="/Account/Register">Create an account</a> to keep all your orders in one place.</p>
+</div>
+
+@if (Model.ConfirmationSent)
+{
+    <div class="notice ok">If that account exists and isn't confirmed yet, a new confirmation link is on its way.</div>
+}
+
+<form method="post" class="card stack" asp-route-returnUrl="@Model.ReturnUrl">
+    <div asp-validation-summary="All"></div>
+    @if (Model.NeedsConfirmation)
+    {
+        <div class="notice warn">
+            Please confirm your email first: click the link we sent when you registered.
+            <button class="btn small" type="submit" asp-page-handler="Resend">Send the link again</button>
+        </div>
+    }
+    <div class="field">
+        <label asp-for="Input.Email">Email</label>
+        <input asp-for="Input.Email" autocomplete="email">
+    </div>
+    <div class="field">
+        <label asp-for="Input.Password">Password</label>
+        <input asp-for="Input.Password" autocomplete="current-password">
+    </div>
+    <label class="check"><input asp-for="Input.RememberMe"> Keep me logged in</label>
+    <div class="actions">
+        <button class="btn primary" type="submit">Log in</button>
+    </div>
+</form>

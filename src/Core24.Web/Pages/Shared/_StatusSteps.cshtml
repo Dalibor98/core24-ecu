@@ -1,0 +1,19 @@
+@model OrderStatus
+@{
+    // The happy path, in order. Cancelled orders show only a badge.
+    var steps = new[] { (OrderStatus.Submitted, "Received"), (OrderStatus.InProgress, "In progress"), (OrderStatus.Ready, "Ready to pay"), (OrderStatus.Paid, "Paid") };
+    var current = Array.FindIndex(steps, s => s.Item1 == Model);
+}
+@if (Model == OrderStatus.Cancelled)
+{
+    <span class="status Cancelled">Cancelled</span>
+}
+else
+{
+    <ol class="steps">
+        @for (var i = 0; i < steps.Length; i++)
+        {
+            <li class="@(i < current ? "done" : i == current ? "now" : "")">@steps[i].Item2</li>
+        }
+    </ol>
+}

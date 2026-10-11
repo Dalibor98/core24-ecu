@@ -1,0 +1,38 @@
+@inject Core24.Web.Features.Notifications.IEmailSender EmailSender
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    @* Order pages contain a secret token in their URL: don't leak it to other sites or search engines. *@
+    <meta name="referrer" content="no-referrer">
+    <meta name="robots" content="noindex">
+    <title>@ViewData["Title"] · CORE24</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,600..900&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="~/css/app.css" asp-append-version="true">
+    <link rel="stylesheet" href="~/css/menu.css" asp-append-version="true">
+</head>
+<body>
+    <header class="top">
+        <a class="brand" href="/">
+            <svg viewBox="0 0 26 26" width="26" height="26" aria-hidden="true"><rect x="6" y="6" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="10" y="10" width="6" height="6" fill="#38d4ff"/><path d="M9 1v4M13 1v4M17 1v4M9 21v4M13 21v4M17 21v4M1 9h4M1 13h4M1 17h4M21 9h4M21 13h4M21 17h4" stroke="currentColor" stroke-width="2"/></svg>
+            CORE24
+        </a>
+        <div class="top-right">
+            <nav><a asp-page="/Orders/New">Send a file</a></nav>
+            <partial name="_AccountMenu" />
+        </div>
+    </header>
+    @* Checks the sender the app STARTED with: changing settings needs a restart to take effect. *@
+    @if (EmailSender is Core24.Web.Features.Notifications.PickupFolderEmailSender)
+    {
+        <div class="dev-banner">Development: emails are NOT sent. They are saved as .eml files in App_Data/mail. Changed the email settings? Restart the app.</div>
+    }
+    <main class="@ViewData["MainClass"]">
+        @RenderBody()
+    </main>
+    <script src="~/js/menu.js" asp-append-version="true"></script>
+</body>
+</html>

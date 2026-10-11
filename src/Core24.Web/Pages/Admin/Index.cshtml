@@ -1,0 +1,47 @@
+@page "/admin"
+@model Core24.Web.Pages.Admin.IndexModel
+@{
+    ViewData["Title"] = "Orders";
+    ViewData["MainClass"] = "wide";
+}
+<div class="head">
+    <p class="eyebrow">Admin</p>
+    <h1>Orders</h1>
+    <div class="actions">
+        <a class="btn small" asp-page="/Admin/Mods">Price list</a>
+    </div>
+</div>
+
+<nav class="filters">
+    <a class="@(Model.Filter is null ? "on" : "")" asp-page="/Admin/Index">All</a>
+    @foreach (var s in Enum.GetValues<OrderStatus>())
+    {
+        <a class="@(Model.Filter == s ? "on" : "")" asp-page="/Admin/Index" asp-route-status="@s">@s (@Model.Counts.GetValueOrDefault(s))</a>
+    }
+</nav>
+
+<div class="card table-wrap">
+    @if (Model.Orders.Count == 0)
+    {
+        <p class="muted">No orders here.</p>
+    }
+    else
+    {
+        <table>
+            <thead><tr><th>Order</th><th>Received</th><th>Customer</th><th>Vehicle</th><th>Status</th><th class="num">Total</th></tr></thead>
+            <tbody>
+                @foreach (var o in Model.Orders)
+                {
+                    <tr>
+                        <td><a class="mono" asp-page="/Admin/Order" asp-route-id="@o.Id">@o.Reference</a></td>
+                        <td>@o.CreatedAtUtc.ToString("d MMM HH:mm") UTC</td>
+                        <td>@o.CustomerName<br><span class="muted">@o.CustomerEmail</span></td>
+                        <td>@o.VehicleMake @o.VehicleModel<br><span class="muted mono">@o.Vin</span></td>
+                        <td><span class="status @o.Status">@o.Status</span></td>
+                        <td class="num">@Money.Format(o.TotalCents, o.Currency)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>

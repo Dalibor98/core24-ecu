@@ -1,0 +1,110 @@
+/* Styles for the app pages (order form, order page, account, admin).
+   Colours and fonts copied from index.html so both feel like one site. */
+:root{
+  color-scheme:dark;
+  --ink:#06080b;--ink-2:#0a0f14;--line:#1a232d;--line-2:#28343f;
+  --steel:#8a97a4;--text:#e7edf2;--soft:#c1cad2;--dim:#3a4652;
+  --scan:#38d4ff;--heat:#ff8a1f;--ok:#45e09a;--bad:#ff5a4f;
+  --display:"Archivo","Arial Black",Arial,sans-serif;
+  --body:"Barlow","Segoe UI",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  --gutter:clamp(16px,4vw,48px);
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--ink);color:var(--text);font:400 17px/1.55 var(--body);-webkit-font-smoothing:antialiased}
+a{color:var(--scan)}
+:focus-visible{outline:2px solid var(--scan);outline-offset:3px;border-radius:6px}
+h1,h2,h3{margin:0;font-family:var(--display);text-transform:uppercase;text-wrap:balance}
+h1{font-size:clamp(28px,4vw,48px);font-weight:900;font-stretch:118%;line-height:1}
+h2{font-size:22px;font-weight:800;font-stretch:112%}
+h3{font-size:17px;font-weight:800}
+p{margin:0}
+
+.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px var(--gutter);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;font:900 17px/1 var(--display);font-stretch:125%;letter-spacing:.03em;text-decoration:none;color:var(--text)}
+.top-right{display:flex;align-items:center;gap:8px}
+.top nav{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.top nav a,.top nav button{padding:8px 12px;border:0;border-radius:999px;background:none;font:500 12px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--steel);text-decoration:none;cursor:pointer}
+.top nav a:hover,.top nav button:hover{color:var(--text);background:rgba(255,255,255,.06)}
+
+main{max-width:960px;margin:0 auto;padding:40px var(--gutter) 80px;display:grid;gap:28px}
+main.wide{max-width:1200px}
+.eyebrow{font:600 12px/1.2 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--steel)}
+.lede{color:var(--soft);max-width:40rem}
+.muted{color:var(--steel)}
+.mono{font-family:var(--mono);font-size:13px}
+.head{display:grid;gap:12px}
+
+.card{border:1px solid var(--line);border-radius:12px;background:var(--ink-2);padding:24px;display:grid;gap:16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media (max-width:720px){.grid2{grid-template-columns:1fr}}
+
+form.stack{display:grid;gap:16px}
+.field{display:grid;gap:7px}
+label,.label{font:500 11px/1.2 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--steel)}
+input,select,textarea{width:100%;padding:12px 14px;border:1px solid var(--line-2);border-radius:8px;background:var(--ink);color:var(--text);font:400 16px/1.4 var(--body)}
+input[type=checkbox]{width:auto;accent-color:var(--scan)}
+input[type=file]{padding:10px}
+textarea{min-height:96px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--scan);box-shadow:0 0 0 3px rgba(56,212,255,.16)}
+.hint{font:400 13px/1.4 var(--body);color:var(--steel)}
+.field-error,.validation-summary-errors{color:var(--bad);font-size:14px}
+.validation-summary-errors ul{margin:0;padding-left:18px}
+
+.mods{display:grid;gap:8px}
+/* .mod and .check are <label>s (so the whole box is clickable) but shouldn't look like field labels */
+.mod,.check{font:400 16px/1.45 var(--body);letter-spacing:0;text-transform:none;color:var(--text)}
+.check{display:flex;gap:10px;align-items:center}
+.mod{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:start;padding:14px;border:1px solid var(--line-2);border-radius:8px;cursor:pointer}
+.mod:has(input:checked){border-color:var(--scan);background:rgba(56,212,255,.05)}
+.mod b{display:block;font-weight:600}
+.mod .hint{display:block}
+.mod .price{font:600 14px/1.4 var(--mono)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;height:46px;padding:0 22px;border-radius:999px;border:1px solid var(--line-2);background:rgba(255,255,255,.03);color:var(--text);font:600 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;text-decoration:none;cursor:pointer}
+.btn:hover{border-color:var(--steel);background:rgba(255,255,255,.07)}
+.btn.primary{background:var(--text);border-color:var(--text);color:var(--ink)}
+.btn.primary:hover{background:#fff}
+.btn.danger{border-color:rgba(255,90,79,.5);color:var(--bad)}
+.btn.small{height:34px;padding:0 14px;font-size:11px}
+.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+
+.notice{padding:14px 16px;border:1px solid rgba(56,212,255,.3);border-radius:8px;background:rgba(56,212,255,.06)}
+.notice.ok{border-color:rgba(69,224,154,.35);background:rgba(69,224,154,.06)}
+.notice.warn{border-color:rgba(255,138,31,.4);background:rgba(255,138,31,.07)}
+.notice.bad{border-color:rgba(255,90,79,.4);background:rgba(255,90,79,.07)}
+
+.status{display:inline-block;padding:5px 10px;border:1px solid var(--line-2);border-radius:999px;font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
+.status.Submitted{color:var(--soft)}
+.status.InProgress{color:var(--scan);border-color:rgba(56,212,255,.4)}
+.status.Ready{color:var(--heat);border-color:rgba(255,138,31,.45)}
+.status.Paid{color:var(--ok);border-color:rgba(69,224,154,.45)}
+.status.Cancelled{color:var(--dim)}
+
+dl.facts{display:grid;grid-template-columns:max-content 1fr;gap:8px 20px;margin:0}
+dl.facts dt{font:500 11px/1.9 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--steel)}
+dl.facts dd{margin:0}
+
+table{width:100%;border-collapse:collapse;font-size:15px}
+th{text-align:left;font:500 11px/1.2 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--steel)}
+th,td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+td.num,th.num{text-align:right;font-family:var(--mono)}
+tr.total td{border-bottom:0;font-weight:600}
+.table-wrap{overflow-x:auto}
+
+.files{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.files li{display:grid;gap:4px;padding:12px 14px;border:1px solid var(--line);border-radius:8px}
+.files .name{font-family:var(--mono);font-size:13px;word-break:break-all}
+
+.steps{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
+.steps li{padding:6px 12px;border:1px solid var(--line);border-radius:999px;font:500 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.steps li.done{color:var(--soft);border-color:var(--line-2)}
+.steps li.now{color:var(--ink);background:var(--scan);border-color:var(--scan)}
+
+.filters{display:flex;flex-wrap:wrap;gap:6px}
+.filters a{padding:6px 12px;border:1px solid var(--line-2);border-radius:999px;font:500 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--steel);text-decoration:none}
+.filters a.on{color:var(--ink);background:var(--text);border-color:var(--text)}
+
+.dev-banner{padding:10px var(--gutter);background:rgba(255,138,31,.12);border-bottom:1px solid rgba(255,138,31,.4);color:var(--heat);font:500 12px/1.5 var(--mono)}
+/* Phones: "Send a file" is also in the account menu, so drop the separate link to keep the header on one line. */
+@media (max-width:560px){.top nav{display:none}}

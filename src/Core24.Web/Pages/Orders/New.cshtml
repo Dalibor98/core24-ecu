@@ -1,0 +1,89 @@
+@page "/order/new"
+@model Core24.Web.Pages.Orders.NewModel
+@{
+    ViewData["Title"] = "Send a file";
+}
+<div class="head">
+    <p class="eyebrow">Remote file service</p>
+    <h1>Send us your ECU file</h1>
+    <p class="lede">Upload the file you read from the truck and choose what you need. We email you when the modified file is ready; you pay, then download it.</p>
+</div>
+
+@* enctype multipart/form-data is required for file uploads; without it the browser sends only the file NAME. *@
+<form method="post" enctype="multipart/form-data" class="stack">
+    <div asp-validation-summary="All"></div>
+
+    <section class="card">
+        <h2>1. Your file</h2>
+        <div class="field">
+            <label asp-for="Files">ECU file(s)</label>
+            <input asp-for="Files" type="file" multiple accept="@string.Join(",", Model.Uploads.AllowedExtensions)" required>
+            <p class="hint">
+                Up to @Model.Uploads.MaxFiles files, @(Model.Uploads.MaxFileBytes / 1024 / 1024) MB each. Keep the file name your tool gave it
+                (e.g. <span class="mono">WDB963…_MCM2_PFLASH+DFLASH_…_OBD.bin</span>): we read the VIN and ECU type from it and check the file arrived undamaged.
+            </p>
+        </div>
+    </section>
+
+    <section class="card">
+        <h2>2. What should we do?</h2>
+        <div class="mods">
+            @foreach (var mod in Model.Mods)
+            {
+                <label class="mod">
+                    <input type="checkbox" name="Input.ModIds" value="@mod.Id" checked="@Model.Input.ModIds.Contains(mod.Id)">
+                    <span><b>@mod.Name</b><span class="hint">@mod.Description</span></span>
+                    <span class="price">@Money.Format(mod.PriceCents, Model.Currency)</span>
+                </label>
+            }
+        </div>
+        <span asp-validation-for="Input.ModIds" class="field-error"></span>
+        <p class="hint">You pay only when the modified file is ready.</p>
+    </section>
+
+    <section class="card">
+        <h2>3. Vehicle and contact</h2>
+        <div class="grid2">
+            <div class="field">
+                <label asp-for="Input.Make">Make</label>
+                <select asp-for="Input.Make" asp-items="@(new SelectList(NewModel.Makes))"></select>
+            </div>
+            <div class="field">
+                <label asp-for="Input.Model"></label>
+                <input asp-for="Input.Model" placeholder="e.g. Actros 1845, 2016">
+            </div>
+            <div class="field">
+                <label asp-for="Input.Name">Name</label>
+                <input asp-for="Input.Name" autocomplete="name">
+                <span asp-validation-for="Input.Name" class="field-error"></span>
+            </div>
+            <div class="field">
+                <label asp-for="Input.Phone">Phone (optional)</label>
+                <input asp-for="Input.Phone" type="tel" autocomplete="tel">
+                <span asp-validation-for="Input.Phone" class="field-error"></span>
+            </div>
+        </div>
+        <div class="field">
+            <label asp-for="Input.Email">Email</label>
+            @if (Model.SignedIn)
+            {
+                <input asp-for="Input.Email" readonly>
+                <p class="hint">The order goes to your account.</p>
+            }
+            else
+            {
+                <input asp-for="Input.Email" autocomplete="email">
+                <p class="hint">We send your private order link here. Want your orders in one place? <a asp-page="/Account/Register">Create an account</a>, it's optional.</p>
+            }
+            <span asp-validation-for="Input.Email" class="field-error"></span>
+        </div>
+        <div class="field">
+            <label asp-for="Input.Message">Message (optional)</label>
+            <textarea asp-for="Input.Message" placeholder="Anything we should know about the truck or the job"></textarea>
+        </div>
+    </section>
+
+    <div class="actions">
+        <button class="btn primary" type="submit">Send order</button>
+    </div>
+</form>

@@ -1,0 +1,43 @@
+@inject SignInManager<AppUser> SignIn
+@{
+    var signedIn = SignIn.IsSignedIn(User);
+}
+@* <details>/<summary> opens and closes without any JavaScript; js/menu.js only adds
+   "close when clicking outside" and "close with Escape". *@
+<details class="menu">
+    <summary aria-label="Account menu">
+        <svg class="user" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        @if (signedIn)
+        {
+            <i class="dot" title="Logged in"></i>
+        }
+        <span class="label">Account</span>
+        <svg class="chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+    </summary>
+    <div class="menu-panel">
+        @if (signedIn)
+        {
+            <p class="menu-who">Logged in as<br><b>@User.Identity?.Name</b></p>
+            <a asp-page="/Account/Index">My orders</a>
+            <a asp-page="/Orders/New">Send a file</a>
+            if (User.IsInRole(Roles.Admin))
+            {
+                <hr>
+                <p class="menu-section">Workshop</p>
+                <a asp-page="/Admin/Index">Orders</a>
+                <a asp-page="/Admin/Mods">Price list</a>
+            }
+            <hr>
+            @* Logging out changes state, so it's a POST with an anti-forgery token, not a link. *@
+            <form method="post" asp-page="/Account/Logout"><button type="submit" class="danger">Log out</button></form>
+        }
+        else
+        {
+            <a asp-page="/Account/Login">Log in</a>
+            <a asp-page="/Account/Register">Create account</a>
+            <hr>
+            <a asp-page="/Orders/New">Send a file</a>
+            <p class="menu-note">No account needed to order: your private order link arrives by email.</p>
+        }
+    </div>
+</details>

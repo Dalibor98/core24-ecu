@@ -1,0 +1,19 @@
+@page "/dev/checkout/{sessionId}"
+@model Core24.Web.Pages.Dev.CheckoutModel
+@{
+    ViewData["Title"] = "Fake checkout";
+}
+<div class="head">
+    <p class="eyebrow">Development only</p>
+    <h1>Fake checkout</h1>
+    <p class="lede">This page stands in for Stripe while you develop. No money moves.</p>
+</div>
+<section class="card">
+    <p>Amount: <b>@Money.Format(Model.Payment.AmountCents, Model.Payment.Currency)</b> · session <span class="mono">@Model.Payment.SessionId</span> · @Model.Payment.Status</p>
+    <div class="actions">
+        <form method="post" asp-page-handler="Pay" asp-route-sessionId="@Model.Payment.SessionId">
+            <button class="btn primary" type="submit">Simulate a successful payment</button>
+        </form>
+        <a class="btn" href="/o/@Model.OrderToken">Cancel</a>
+    </div>
+</section>

@@ -1,0 +1,12 @@
+# Build output
+bin/
+obj/
+.vs/
+*.user
+
+# Runtime data: database, uploaded files, dev emails, encryption keys
+App_Data/
+
+# The client's sample ECU dumps (real VINs): keep out of source control
+Utility/*.bin
+docs/

@@ -1,0 +1,29 @@
+/* Account dropdown in the nav bar. Shared by the app pages (_AccountMenu.cshtml)
+   and the landing page (index.html), which both define the colour variables used here. */
+.menu{position:relative}
+.menu summary{list-style:none;position:relative;display:flex;align-items:center;gap:8px;height:40px;padding:0 14px 0 10px;border:1px solid var(--line-2);border-radius:999px;background:rgba(8,11,15,.62);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font:500 12px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--soft);cursor:pointer;user-select:none}
+.menu summary::-webkit-details-marker{display:none}
+.menu summary:hover,.menu[open] summary{color:var(--text);border-color:var(--steel)}
+.menu summary .user{width:18px;height:18px}
+.menu summary .dot{position:absolute;left:24px;top:9px;width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 2px var(--ink)}
+.menu summary .chev{width:10px;height:10px;transition:transform .2s}
+.menu[open] summary .chev{transform:rotate(180deg)}
+
+.menu-panel{position:absolute;right:0;top:calc(100% + 8px);z-index:40;width:max-content;min-width:230px;max-width:min(300px,calc(100vw - 32px));display:grid;padding:8px;border:1px solid var(--line-2);border-radius:12px;background:#0a0f14;box-shadow:0 18px 40px rgba(0,0,0,.55)}
+.menu-panel a,.menu-panel button{display:block;width:100%;margin:0;padding:10px 12px;border:0;border-radius:8px;background:none;text-align:left;font:500 12px/1.2 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--soft);text-decoration:none;cursor:pointer}
+.menu-panel a:hover,.menu-panel button:hover,.menu-panel a:focus-visible,.menu-panel button:focus-visible{background:rgba(255,255,255,.06);color:var(--text)}
+.menu-panel .danger{color:var(--bad)}
+.menu-panel form{display:block;margin:0}
+.menu-panel hr{width:100%;margin:6px 0;border:0;border-top:1px solid var(--line)}
+.menu-who{margin:0;padding:8px 12px 10px;font:400 13px/1.4 var(--body);color:var(--steel);overflow-wrap:anywhere}
+.menu-who b{color:var(--text);font-weight:600}
+.menu-section{margin:0;padding:6px 12px 2px;font:500 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.menu-note{margin:0;padding:6px 12px 4px;font:400 12px/1.4 var(--body);color:var(--steel)}
+
+/* Phones: icon only, so brand + menu + the main button still fit on one line. */
+@media (max-width:520px){
+  .menu summary .label{display:none}
+  .menu summary{padding:0 12px 0 10px}
+  /* The button isn't at the screen edge on every page, so pin the panel to the screen instead. */
+  .menu-panel{position:fixed;left:16px;right:16px;top:calc(env(safe-area-inset-top,0px) + 64px);width:auto;max-width:none}
+}

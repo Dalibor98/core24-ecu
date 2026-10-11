@@ -1,0 +1,41 @@
+@page "/account/register"
+@model Core24.Web.Pages.Account.RegisterModel
+@{
+    ViewData["Title"] = "Create an account";
+}
+<div class="head">
+    <p class="eyebrow">Account</p>
+    <h1>Create an account</h1>
+    <p class="lede">Optional. With an account, all your orders are in one place, including ones you placed earlier with the same email.</p>
+</div>
+
+@if (Model.Sent)
+{
+    <div class="notice ok">
+        Almost done. We sent an email to <b>@Model.Input.Email</b>. Click the link in it, then log in.
+        If you registered with this address before, log in with the password you chose then.
+    </div>
+}
+else
+{
+    <form method="post" class="card stack">
+        <div asp-validation-summary="All"></div>
+        <div class="field">
+            <label asp-for="Input.Email">Email</label>
+            <input asp-for="Input.Email" autocomplete="email">
+        </div>
+        <div class="field">
+            <label asp-for="Input.Password">Password</label>
+            <input asp-for="Input.Password" autocomplete="new-password">
+            <p class="hint">At least 10 characters. A short sentence works well.</p>
+        </div>
+        <div class="field">
+            <label asp-for="Input.ConfirmPassword"></label>
+            <input asp-for="Input.ConfirmPassword" autocomplete="new-password">
+        </div>
+        <div class="actions">
+            <button class="btn primary" type="submit">Create account</button>
+            <a asp-page="/Account/Login">I already have one</a>
+        </div>
+    </form>
+}

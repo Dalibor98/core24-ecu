@@ -1,0 +1,24 @@
+@page "/account/confirm-email"
+@model Core24.Web.Pages.Account.ConfirmEmailModel
+@{
+    ViewData["Title"] = "Confirm email";
+}
+<div class="head">
+    @if (Model.Confirmed)
+    {
+        <h1>Email confirmed</h1>
+        <p class="lede">
+            Your account is ready.
+            @if (Model.ClaimedOrders > 0)
+            {
+                <text>We found @Model.ClaimedOrders earlier order(s) with your email and added them to your account.</text>
+            }
+        </p>
+        <p><a class="btn primary" asp-page="/Account/Login">Log in</a></p>
+    }
+    else
+    {
+        <h1>Link not valid</h1>
+        <p class="lede">This confirmation link is invalid or has expired. Try to log in and we'll offer to send a new one.</p>
+    }
+</div>

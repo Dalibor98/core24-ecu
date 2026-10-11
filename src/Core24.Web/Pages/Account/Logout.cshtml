@@ -1,0 +1,13 @@
+@page "/account/logout"
+@model Core24.Web.Pages.Account.LogoutModel
+@{
+    ViewData["Title"] = "Log out";
+}
+<div class="head">
+    <h1>Log out?</h1>
+    <p class="lede">You're logged in as <b>@User.Identity?.Name</b>.</p>
+</div>
+<form method="post" class="actions">
+    <button class="btn primary" type="submit">Log out</button>
+    <a class="btn" href="/">Stay logged in</a>
+</form>

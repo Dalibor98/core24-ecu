@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Core24.Web/Core24.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Core24.Web.Tests/Core24.Web.Tests.csproj" />
+  </Folder>
+</Solution>

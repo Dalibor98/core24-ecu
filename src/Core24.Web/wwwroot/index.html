@@ -1,0 +1,1542 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>CORE24 Truck ECU</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,600..900&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/css/menu.css">
+<style>
+:root{
+  color-scheme:dark;
+  --ink:#06080b;--ink-2:#0a0f14;--panel:rgba(9,13,18,.84);
+  --line:#1a232d;--line-2:#28343f;
+  --steel:#8a97a4;--text:#e7edf2;--soft:#c1cad2;--dim:#3a4652;
+  --scan:#38d4ff;--heat:#ff8a1f;--ok:#45e09a;--bad:#ff5a4f;
+  --display:"Archivo","Arial Black",Arial,sans-serif;
+  --body:"Barlow","Segoe UI",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  --gutter:clamp(16px,4vw,56px);
+}
+html.lenis,html.lenis body{height:auto}
+.lenis.lenis-smooth{scroll-behavior:auto!important}
+.lenis.lenis-stopped{overflow:hidden}
+*,*::before,*::after{box-sizing:border-box}
+body{background:var(--ink);color:var(--text);font:400 17px/1.55 var(--body);-webkit-font-smoothing:antialiased;overflow-x:clip}
+a{color:inherit}
+::selection{background:var(--scan);color:var(--ink)}
+:focus-visible{outline:2px solid var(--scan);outline-offset:3px;border-radius:6px}
+
+/* ---------- type ---------- */
+h1,h2,h3{margin:0;font-family:var(--display);text-wrap:balance;text-transform:uppercase}
+h1{font-size:clamp(40px,7.2vw,104px);line-height:.9;font-weight:900;font-stretch:125%;letter-spacing:-.015em}
+h2{font-size:clamp(28px,3.6vw,52px);line-height:.96;font-weight:800;font-stretch:118%;letter-spacing:-.01em}
+h3{font-size:21px;line-height:1.05;font-weight:800;font-stretch:112%}
+.eyebrow{margin:0;display:flex;align-items:center;gap:10px;font:600 12px/1.2 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--steel)}
+.eyebrow i{display:block;width:22px;height:1px;background:var(--scan);box-shadow:0 0 8px var(--scan)}
+.lede{margin:0;max-width:31rem;font-size:clamp(17px,1.35vw,20px);color:var(--soft)}
+.num{margin:0;font:600 12px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--steel)}
+.num b{color:var(--acc,var(--scan))}
+.split .ch{will-change:opacity,color}
+
+/* ---------- buttons ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;height:48px;padding:0 22px;border-radius:999px;border:1px solid var(--line-2);background:rgba(255,255,255,.03);color:var(--text);font:600 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;text-decoration:none;cursor:pointer;transition:background .2s,border-color .2s,transform .2s}
+.btn:hover{border-color:var(--steel);background:rgba(255,255,255,.07)}
+.btn.primary{background:var(--text);border-color:var(--text);color:var(--ink)}
+.btn.primary:hover{background:#fff;transform:translateY(-1px)}
+.ctas{display:flex;flex-wrap:wrap;gap:12px}
+
+/* ---------- nav ---------- */
+.nav{position:fixed;inset:0 0 auto 0;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:calc(env(safe-area-inset-top,0px) + 14px) var(--gutter) 14px;pointer-events:none}
+.nav>*{pointer-events:auto}
+.brand{display:flex;align-items:center;gap:10px;font:900 17px/1 var(--display);font-stretch:125%;letter-spacing:.03em;text-decoration:none}
+.brand svg{width:26px;height:26px;color:var(--text)}
+.nav ul{display:flex;gap:2px;margin:0;padding:5px;list-style:none;border:1px solid var(--line);border-radius:999px;background:rgba(8,11,15,.62);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.nav ul a{display:block;padding:9px 14px;border-radius:999px;font:500 12px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--steel);text-decoration:none}
+.nav ul a:hover{color:var(--text);background:rgba(255,255,255,.06)}
+.nav .btn{height:40px;padding:0 18px}
+.nav-right{display:flex;align-items:center;gap:8px}
+@media (max-width:880px){.nav ul{display:none}}
+
+/* ---------- 3D stage ---------- */
+.scene{position:relative}
+.stage{position:sticky;top:0;height:100vh;overflow:hidden;background:radial-gradient(110% 90% at 66% 46%,#0e151c 0%,var(--ink) 62%)}
+#gl{position:absolute;inset:0;width:100%;height:100%;display:block}
+.vignette{position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 100% at 64% 46%,transparent 55%,rgba(3,4,6,.8) 100%),linear-gradient(90deg,rgba(6,8,11,.8) 0%,rgba(6,8,11,.35) 30%,transparent 50%)}
+.no-gl #gl{display:none}
+.no-gl .stage{background:radial-gradient(60% 50% at 66% 46%,rgba(56,212,255,.14),transparent 70%),var(--ink)}
+
+.callouts{position:absolute;inset:0;pointer-events:none}
+.callouts svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.callouts line{stroke:rgba(231,237,242,.5);stroke-width:1}
+.callouts circle{fill:var(--scan)}
+.tag{position:absolute;left:0;top:0;display:flex;align-items:center;gap:8px;padding:6px 10px 6px 6px;white-space:nowrap;border:1px solid var(--line-2);border-radius:999px;background:rgba(7,10,14,.78);font:500 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--text);opacity:0;will-change:transform,opacity}
+.tag b,.legend b{display:grid;place-items:center;flex:none;width:18px;height:18px;border-radius:50%;background:var(--scan);color:var(--ink);font:700 10px/1 var(--mono)}
+
+.rail{position:absolute;right:var(--gutter);top:50%;transform:translateY(-50%);display:grid;gap:18px;margin:0;padding:0 0 0 16px;list-style:none;border-left:1px solid var(--line-2);font:500 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.rail::before{content:"";position:absolute;left:-1px;top:0;width:1px;height:calc(var(--p,0)*100%);background:var(--scan);box-shadow:0 0 10px var(--scan)}
+.rail li{display:flex;gap:10px;transition:color .3s}
+.rail li em{font-style:normal}
+.rail li.on{color:var(--text)}
+.rail li.on em{color:var(--scan)}
+
+.cursor{position:fixed;left:0;top:0;z-index:25;pointer-events:none;padding:8px 12px;border:1px solid var(--line-2);border-radius:999px;background:rgba(7,10,14,.6);font:500 11px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;opacity:0;transition:opacity .4s}
+.cursor.show{opacity:1}
+.hint{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);transform:translateX(-50%);display:none;flex-direction:column;align-items:center;gap:8px;font:500 10px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--steel);transition:opacity .4s}
+.hint i{width:1px;height:28px;background:linear-gradient(var(--scan),transparent);animation:drip 1.6s ease-in-out infinite}
+@keyframes drip{0%{transform:scaleY(0);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}51%{transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
+@media (pointer:coarse){.hint{display:flex}}
+
+/* ---------- chapters ---------- */
+.chapters{position:relative;z-index:2;margin-top:-100vh}
+/* padding-bottom: the sticky .box releases this far before the next section arrives, so it never sits flush on it */
+.chapter{position:relative;height:calc(var(--h,160)*1vh);padding-inline:var(--gutter);padding-bottom:clamp(20px,3.5vh,36px)}
+.hero{height:100vh;display:flex;flex-direction:column;justify-content:flex-end;gap:22px;padding-bottom:max(9vh,64px)}
+.specs{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
+.specs li{padding:7px 10px;border:1px solid var(--line);border-radius:999px;font:500 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--steel)}
+.box{position:sticky;top:max(17vh,92px);max-width:31rem;display:grid;gap:18px}
+.box>p:not(.num){margin:0;color:var(--soft);font-size:clamp(16px,1.2vw,18px)}
+#diagnose{--acc:var(--scan)}
+#tune{--acc:var(--heat)}
+#deliver{--acc:var(--ok)}
+.legend{display:grid;gap:8px;margin:0;padding:0;list-style:none;font:500 12px/1.3 var(--mono);letter-spacing:.04em;color:var(--soft)}
+.legend li{display:flex;align-items:center;gap:10px}
+
+/* ---------- HUD panels ---------- */
+.panel{display:grid;gap:14px;padding:16px;border:1px solid var(--line-2);border-radius:12px;background:var(--panel);font-family:var(--mono)}
+.panel header{display:flex;justify-content:space-between;align-items:center;gap:12px;font:500 11px/1.3 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--steel)}
+.dot{display:inline-block;width:8px;height:8px;margin-right:8px;border-radius:50%;background:var(--bad);box-shadow:0 0 10px var(--bad);vertical-align:1px;transition:background .3s,box-shadow .3s}
+.dot.ok{background:var(--ok);box-shadow:0 0 10px var(--ok)}
+.live{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;border:1px solid var(--line);border-radius:8px;background:var(--line);overflow:hidden}
+.live div{display:grid;gap:6px;padding:10px;background:var(--ink-2)}
+.live small{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--steel)}
+.live output{font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.live output i{margin-left:3px;font-style:normal;font-size:10px;color:var(--steel)}
+.faults{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.faults li{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;padding:8px 10px;border:1px solid rgba(255,90,79,.25);border-radius:6px;background:rgba(255,90,79,.07);font-size:11px;opacity:.28;transition:opacity .35s,background .35s,border-color .35s}
+.faults li.on{opacity:1}
+.faults code{font:600 11px/1.2 var(--mono);color:var(--bad);white-space:nowrap}
+.faults span{font:500 14px/1.25 var(--body);color:var(--soft)}
+.faults em{font-style:normal;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--bad)}
+.faults li.fixed{border-color:rgba(69,224,154,.28);background:rgba(69,224,154,.07)}
+.faults li.fixed code,.faults li.fixed em{color:var(--ok)}
+
+.flash{display:grid;gap:8px}
+.flash-row{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--soft)}
+.flash-row output{color:var(--heat);font-variant-numeric:tabular-nums}
+.bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;width:calc(var(--f,0)*100%);background:linear-gradient(90deg,#ff4d1a,var(--heat));box-shadow:0 0 14px var(--heat)}
+.steps{display:grid;gap:4px;margin:0;padding:0;list-style:none;font-size:11px;letter-spacing:.04em;color:var(--dim);transition:color .3s}
+.steps li::before{content:"○ "}
+.steps li.on{color:var(--soft)}
+.steps li.on::before{content:"● ";color:var(--ok)}
+.odos{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.odo{display:grid;gap:6px}
+.odo small{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--steel)}
+.odo .v{display:flex;align-items:baseline;font:800 clamp(24px,2.3vw,34px)/1 var(--display);font-stretch:112%;font-variant-numeric:tabular-nums}
+.odo .v i{margin-left:6px;font:500 11px/1 var(--mono);font-style:normal;color:var(--steel)}
+.wheel{display:inline-block;height:1em;overflow:hidden}
+.wheel span{display:block;will-change:transform}
+.wheel b{display:block;height:1em;line-height:1em;font-weight:inherit}
+.chart{display:block;width:100%;height:auto}
+.chart text{font:500 9px var(--mono);fill:var(--steel)}
+.chart .grid{stroke:var(--line-2);stroke-width:1}
+.chart .stock{fill:none;stroke:var(--steel);stroke-width:1.5;stroke-dasharray:4 4}
+.chart .tuned{fill:none;stroke:var(--heat);stroke-width:2.5;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:var(--d,0)}
+.chart-key{display:flex;gap:18px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--steel)}
+.chart-key span::before{content:"";display:inline-block;width:16px;height:2px;margin-right:8px;vertical-align:3px;background:var(--steel)}
+.chart-key span+span::before{background:var(--heat)}
+
+/* ---------- after the scene ---------- */
+.after{position:relative;z-index:3;background:var(--ink);border-top:1px solid var(--line)}
+.wrap{max-width:1240px;margin-inline:auto;padding-inline:var(--gutter)}
+.section{padding-block:clamp(72px,10vw,136px)}
+.section-head{display:grid;gap:16px;max-width:42rem;margin-bottom:44px}
+.services{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;border:1px solid var(--line);background:var(--line)}
+.services article{position:relative;display:grid;align-content:start;gap:12px;padding:28px;background:var(--ink)}
+.services p{margin:0;font-size:16px;color:var(--soft)}
+.services .t{font:500 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--scan)}
+/* "+" marks where boxes meet; JS sets --o/--o2 so they dim toward the screen edges like the grid */
+.services article::before,.makes li::before,.makes li::after{content:"";position:absolute;z-index:1;width:11px;height:11px;pointer-events:none;opacity:var(--o,.6);
+  background:linear-gradient(var(--steel),var(--steel)) center/1px 100% no-repeat,linear-gradient(var(--steel),var(--steel)) center/100% 1px no-repeat}
+.services article::before,.makes li::before{left:-6px;top:-6px}
+.makes{display:grid;gap:18px;margin-top:64px;scroll-margin-top:110px}
+/* logo wall: thin cell grid whose rules run past the edges and fade out */
+.makes ul{position:relative;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin:0;padding:0;list-style:none;border-left:1px solid var(--line);background:var(--ink);
+  font:800 22px/1.1 var(--display);font-stretch:118%;text-transform:uppercase;color:#56636f}
+.makes ul::before,.makes ul::after{content:"";position:absolute;left:-8vw;right:-8vw;height:1px;pointer-events:none;background:linear-gradient(90deg,transparent,var(--line-2) 12%,var(--line-2) 88%,transparent)}
+.makes ul::before{top:0}
+.makes ul::after{bottom:-1px}
+.makes li{position:relative;container-type:inline-size;display:grid;place-items:center;height:116px;padding-inline:12px;text-align:center;border-right:1px solid var(--line);border-bottom:1px solid var(--line);transition:color .3s}
+.makes li::after{right:-6px;bottom:-6px;opacity:var(--o2,.6)}
+.makes li:hover{color:var(--soft)}
+/* name scales with its cell so the longest word ("MERCEDES-") always clears the borders */
+.makes li span{font-size:min(clamp(16px,1.6vw,22px),12.5cqi)}
+
+/* section backdrop: dots on every grid corner plus line segments in drifting patches,
+   both strongest in the middle and fading out toward every edge */
+.after{--cell:96px;--edge:radial-gradient(ellipse 62% 78% at 50% 50%,#000 30%,transparent 100%)}
+.after::before,.after::after{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;background-size:var(--cell) var(--cell)}
+.after::before{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Ccircle cx='48.5' cy='48.5' r='1.1' fill='%23c1cad2' fill-opacity='.26'/%3E%3C/svg%3E");
+  -webkit-mask-image:var(--edge);mask-image:var(--edge)}
+.after::after{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Cpath d='M0 48.5h41M56 48.5h40M48.5 0v41M48.5 56v40' stroke='%23c1cad2' stroke-opacity='.12' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
+  --m:radial-gradient(closest-side,#000 35%,transparent);
+  -webkit-mask-image:var(--edge),var(--m),var(--m),var(--m);mask-image:var(--edge),var(--m),var(--m),var(--m);
+  -webkit-mask-composite:source-in,source-over,source-over,source-over;mask-composite:intersect,add,add,add;
+  -webkit-mask-size:100% 100%,55% 75%,55% 75%,55% 75%;mask-size:100% 100%,55% 75%,55% 75%,55% 75%;
+  -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
+  animation:grid-drift 34s ease-in-out infinite alternate}
+@keyframes grid-drift{
+  from{-webkit-mask-position:0 0,0% 0%,100% 35%,35% 100%;mask-position:0 0,0% 0%,100% 35%,35% 100%}
+  to{-webkit-mask-position:0 0,45% 70%,60% 0%,100% 90%;mask-position:0 0,45% 70%,60% 0%,100% 90%}}
+.after>.wrap{position:relative;z-index:1}
+.book{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start}
+form{display:grid;gap:14px}
+.field{display:grid;gap:7px}
+label{font:500 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--steel)}
+input,select,textarea{width:100%;padding:12px 14px;border:1px solid var(--line-2);border-radius:8px;background:var(--ink-2);color:var(--text);font:400 16px/1.4 var(--body)}
+textarea{min-height:96px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--scan);box-shadow:0 0 0 3px rgba(56,212,255,.16)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.note{margin:0;font:500 12px/1.5 var(--mono);color:var(--steel)}
+.form-msg{padding:12px 14px;border:1px solid rgba(56,212,255,.3);border-radius:8px;background:rgba(56,212,255,.06)}
+.site-foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;padding-block:28px;border-top:1px solid var(--line);font:500 12px/1.6 var(--mono);color:var(--steel)}
+
+/* ---------- responsive ---------- */
+@media (max-width:1100px){.rail{display:none}}
+@media (max-width:960px){.services{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:860px){.book{grid-template-columns:1fr}}
+@media (max-width:820px){
+  .vignette{background:radial-gradient(120% 90% at 50% 30%,transparent 50%,rgba(3,4,6,.8) 100%),linear-gradient(0deg,rgba(6,8,11,.96) 32%,transparent 62%)}
+  .hero{padding-bottom:max(12vh,88px)}
+  .box{top:41vh;gap:12px;padding:14px;margin-inline:-6px;border-radius:14px;background:linear-gradient(180deg,rgba(6,8,11,.5),rgba(6,8,11,.92) 38%)}
+  .legend{display:none}
+  .live{grid-template-columns:repeat(2,1fr)}
+  .faults span{font-size:13px}
+  .faults li:nth-child(3){display:none}
+  .chart,.chart-key{display:none}
+  .tag{padding:4px}
+  .tag span{display:none}
+}
+@media (max-width:620px){.services{grid-template-columns:1fr}.row2{grid-template-columns:1fr}.after{--cell:64px}.makes li{height:88px}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
+</style>
+<header class="nav">
+  <a class="brand" href="#top" aria-label="CORE24 home">
+    <svg viewBox="0 0 26 26" aria-hidden="true"><rect x="6" y="6" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><rect x="10" y="10" width="6" height="6" fill="#38d4ff"/><path d="M9 1v4M13 1v4M17 1v4M9 21v4M13 21v4M17 21v4M1 9h4M1 13h4M1 17h4M21 9h4M21 13h4M21 17h4" stroke="currentColor" stroke-width="2"/></svg>
+    CORE24
+  </a>
+  <ul>
+    <li><a href="#services">Services</a></li>
+    <li><a href="#makes">Makes</a></li>
+    <li><a href="#files">File service</a></li>
+  </ul>
+  <div class="nav-right">
+    <!-- Account menu: logged-out version here; js/menu.js swaps in the logged-in one via /api/me -->
+    <details class="menu" data-dynamic>
+      <summary aria-label="Account menu">
+        <svg class="user" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span class="label">Account</span>
+        <svg class="chev" viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+      </summary>
+      <div class="menu-panel">
+        <a href="/account/login">Log in</a>
+        <a href="/account/register">Create account</a>
+        <hr>
+        <a href="/order/new">Send a file</a>
+        <p class="menu-note">No account needed to order: your private order link arrives by email.</p>
+      </div>
+    </details>
+    <a class="btn primary" href="#book">Book a check</a>
+  </div>
+</header>
+
+<div class="cursor" id="cursor" aria-hidden="true">Scroll to explore</div>
+
+<main id="top">
+  <section class="scene" id="scene">
+    <div class="stage" id="stage">
+      <canvas id="gl" role="img" aria-label="3D model of a truck engine control unit that opens up, gets scanned and remapped as you scroll"></canvas>
+      <div class="vignette"></div>
+      <div class="callouts" id="callouts" aria-hidden="true"><svg id="callout-lines"></svg></div>
+      <ol class="rail" id="rail" aria-hidden="true">
+        <li><em>01</em>Anatomy</li>
+        <li><em>02</em>Diagnose</li>
+        <li><em>03</em>Tune</li>
+        <li><em>04</em>Deliver</li>
+      </ol>
+      <div class="hint" id="hint" aria-hidden="true"><i></i>Scroll</div>
+    </div>
+
+    <div class="chapters">
+      <div class="chapter hero">
+        <p class="eyebrow"><i></i>Truck diagnostics &amp; ECU tuning</p>
+        <h1 id="hero-title">Your truck's brain, decoded.</h1>
+        <p class="lede">We read, diagnose and remap the engine computer of heavy trucks. All major makes, at your yard or at our workshop.</p>
+        <div class="ctas">
+          <a class="btn primary" href="#book">Book a diagnostic</a>
+          <a class="btn" href="#anatomy">See how it works</a>
+        </div>
+        <ul class="specs">
+          <li>24 V systems</li><li>J1939 CAN bus</li><li>OBD &amp; Deutsch 9-pin</li><li>Euro 5 / Euro 6</li>
+        </ul>
+      </div>
+
+      <article class="chapter" id="anatomy" style="--h:170">
+        <div class="box">
+          <p class="num"><b>01</b> / Anatomy</p>
+          <h2 class="split">One box runs the whole engine.</h2>
+          <p>The ECU decides how much fuel goes in, when, and at what pressure. Hundreds of times a second it reads boost, rail pressure, temperatures and load, then sets injection, turbo and exhaust treatment to match.</p>
+          <ul class="legend">
+            <li><b>A</b>Die-cast housing and heat sink</li>
+            <li><b>B</b>32-bit main processor</li>
+            <li><b>C</b>Flash memory, where the map lives</li>
+            <li><b>D</b>Injector driver stages</li>
+            <li><b>E</b>Harness connector to the truck</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="chapter" id="diagnose" style="--h:190">
+        <div class="box">
+          <p class="num"><b>02</b> / Diagnose</p>
+          <h2 class="split">We find the fault before it strands you.</h2>
+          <p>We connect over the J1939 CAN bus and read every module: stored and pending fault codes, freeze-frame data and live sensor values. You get a clear report, not a guess.</p>
+          <div class="panel" aria-label="Example diagnostic readout">
+            <header><span><i class="dot" id="diag-dot"></i>Live data · 500 kbit/s</span><span id="diag-state">Scanning</span></header>
+            <div class="live">
+              <div><small>Boost</small><output id="v-boost">2.41<i>bar</i></output></div>
+              <div><small>Rail</small><output id="v-rail">1840<i>bar</i></output></div>
+              <div><small>EGT</small><output id="v-egt">412<i>°C</i></output></div>
+              <div><small>Coolant</small><output id="v-cool">86<i>°C</i></output></div>
+            </div>
+            <ul class="faults" id="faults">
+              <li><code>SPN 102 · FMI 18</code><span>Boost pressure below normal</span><em>Found</em></li>
+              <li><code>SPN 3251 · FMI 0</code><span>DPF differential pressure high</span><em>Found</em></li>
+              <li><code>SPN 4364 · FMI 18</code><span>SCR conversion efficiency low</span><em>Found</em></li>
+            </ul>
+          </div>
+        </div>
+      </article>
+
+      <article class="chapter" id="tune" style="--h:190">
+        <div class="box">
+          <p class="num"><b>03</b> / Tune</p>
+          <h2 class="split">A better map, written safely.</h2>
+          <p>We back up the original software first, then write a calibration matched to your loads and routes. More torque where you pull, less fuel on the highway. The original can be restored at any time.</p>
+          <div class="panel" aria-label="Example ECU flash and results">
+            <header><span>ECU flash · stage 1</span><span>Example: 13 L Euro 6</span></header>
+            <div class="flash">
+              <div class="flash-row"><span id="flash-label">Reading original map</span><output id="flash-pct">0%</output></div>
+              <div class="bar" id="flash-bar"><i></i></div>
+              <ol class="steps" id="flash-steps">
+                <li>Original backed up (4 MB)</li>
+                <li>Checksum corrected</li>
+                <li>Map written and verified</li>
+              </ol>
+            </div>
+            <div class="odos">
+              <div class="odo"><small>Power</small><div class="v"><span class="odometer" data-from="480" data-to="560"></span><i>hp</i></div></div>
+              <div class="odo"><small>Torque</small><div class="v"><span class="odometer" data-from="2500" data-to="2800"></span><i>Nm</i></div></div>
+              <div class="odo"><small>Fuel</small><div class="v"><span>−</span><span class="odometer" data-from="0" data-to="7"></span><i>%</i></div></div>
+            </div>
+            <svg class="chart" id="chart" viewBox="0 0 320 130" aria-label="Torque curve, stock versus stage 1">
+              <line class="grid" x1="30" y1="10" x2="310" y2="10"/><line class="grid" x1="30" y1="60" x2="310" y2="60"/><line class="grid" x1="30" y1="110" x2="310" y2="110"/>
+              <text x="26" y="13" text-anchor="end">3000</text><text x="26" y="63" text-anchor="end">2000</text><text x="26" y="113" text-anchor="end">1000</text>
+              <text x="30" y="126" text-anchor="middle">800</text><text x="123.3" y="126" text-anchor="middle">1200</text><text x="216.7" y="126" text-anchor="middle">1600</text><text x="310" y="126" text-anchor="end">2000 rpm</text>
+              <path class="stock" d="M30 75 L53.3 52.5 L76.7 35 L170 35 L216.7 45 L263.3 57.5 L310 72.5"/>
+              <path class="tuned" pathLength="1" d="M30 67.5 L53.3 42.5 L76.7 20 L170 20 L216.7 30 L263.3 45 L310 62.5"/>
+            </svg>
+            <div class="chart-key"><span>Stock</span><span>Stage 1 · Nm</span></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="chapter" id="deliver" style="--h:150">
+        <div class="box">
+          <p class="num"><b>04</b> / Deliver</p>
+          <h2 class="split">Back on the road, verified.</h2>
+          <p>We clear the codes, test the truck under load and hand you a report with before and after readings. Most remaps take under two hours.</p>
+          <div class="ctas"><a class="btn primary" href="#book">Book a diagnostic</a></div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="after section" id="services">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow"><i></i>Services</p>
+        <h2>Everything the engine computer touches.</h2>
+      </div>
+      <div class="services">
+        <article><span class="t">OBD · J1939</span><h3>Full diagnostics</h3><p>Fault codes, live data, freeze frames and actuator tests on every module, from engine to gearbox to brakes.</p></article>
+        <article><span class="t">Stage 1</span><h3>Performance remap</h3><p>More torque for heavy loads and long climbs, kept inside the limits of the clutch and gearbox.</p></article>
+        <article><span class="t">Eco</span><h3>Economy remap</h3><p>A calibration for long highway runs that lowers fuel use. Fleets typically see 5 to 8 percent.</p></article>
+        <article><span class="t">DPF · SCR</span><h3>Exhaust treatment</h3><p>Diagnosis, forced regeneration and cleaning for particulate filters and AdBlue systems. We repair them, we don't remove them.</p></article>
+        <article><span class="t">Fleet</span><h3>Fleet health checks</h3><p>Scheduled scans for every truck in the fleet, with one clear report per vehicle.</p></article>
+        <article><span class="t">Mobile</span><h3>We come to you</h3><p>Diagnostics and remaps at your yard or depot, so the truck loses hours instead of days.</p></article>
+      </div>
+      <div class="makes" id="makes">
+        <p class="eyebrow"><i></i>Makes we work on</p>
+        <ul><li><span>Volvo</span></li><li><span>Scania</span></li><li><span>MAN</span></li><li><span>DAF</span></li><li><span>Mercedes-Benz</span></li><li><span>Iveco</span></li><li><span>Renault Trucks</span></li></ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="after section" id="files">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow"><i></i>Remote file service</p>
+        <h2>Send the file. Get it back tuned.</h2>
+        <p class="lede">Already read the ECU yourself? Upload the file, pick what you need, and download the modified file once it's ready. You pay only when it's done.</p>
+      </div>
+      <div class="services">
+        <article><span class="t">01 · Upload</span><h3>Send your read</h3><p>Upload the file from your tool and choose the modifications. We check it arrived undamaged.</p></article>
+        <article><span class="t">02 · We modify</span><h3>We do the work</h3><p>You get an email as soon as the modified file is ready, with the price you saw when ordering.</p></article>
+        <article><span class="t">03 · Pay &amp; download</span><h3>Pay, then download</h3><p>Pay securely online and the download unlocks straight away. Your order page keeps the file for later.</p></article>
+      </div>
+      <div class="ctas" style="margin-top:32px">
+        <a class="btn primary" href="/order/new">Upload a file</a>
+        <a class="btn" href="/account">My orders</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="after section" id="book">
+    <div class="wrap book">
+      <div class="section-head">
+        <p class="eyebrow"><i></i>Book</p>
+        <h2>Tell us what the truck is doing.</h2>
+        <p class="lede">Warning light, power loss, high fuel use or a planned remap. We reply with a time slot and a price before any work starts.</p>
+      </div>
+      <form id="book-form" novalidate>
+        <div class="row2">
+          <div class="field"><label for="f-name">Name</label><input id="f-name" name="name" autocomplete="name" required></div>
+          <div class="field"><label for="f-phone">Phone</label><input id="f-phone" name="phone" type="tel" autocomplete="tel" required></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label for="f-make">Make</label>
+            <select id="f-make" name="make"><option>Volvo</option><option>Scania</option><option>MAN</option><option>DAF</option><option>Mercedes-Benz</option><option>Iveco</option><option>Renault Trucks</option><option>Other</option></select>
+          </div>
+          <div class="field"><label for="f-model">Model and year</label><input id="f-model" name="model" placeholder="e.g. FH 500, 2019"></div>
+        </div>
+        <div class="field"><label for="f-issue">What's happening?</label><textarea id="f-issue" name="issue" placeholder="e.g. Engine light on, loses power on hills"></textarea></div>
+        <button class="btn primary" type="submit">Request a slot</button>
+        <p class="note form-msg" id="form-msg" role="status" hidden>This is a demo form and nothing was sent. Connect it to your email or booking tool before launch.</p>
+      </form>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap site-foot">
+  <span>CORE24 is a placeholder name · All figures are examples</span>
+  <span>Built with Three.js, GSAP ScrollTrigger and Lenis</span>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/ScrollTrigger.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/SplitText.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.3.4/dist/lenis.min.js"></script>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+/* ============ shared setup ============ */
+const root = document.documentElement;
+const canvas = document.getElementById('gl');
+const stageEl = document.getElementById('stage');
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const FINE = matchMedia('(pointer: fine)').matches;
+const isSmall = () => innerWidth < 820;
+// Ambient occlusion is too heavy for phones, so it is desktop only
+const HQ = !isSmall();
+// Studio photo used for reflections; the built-in room stays as the fallback if it can't load
+const HDRI = 'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/studio_small_09_1k.hdr';
+
+const COL = {
+  scan: new THREE.Color('#38d4ff'),
+  heat: new THREE.Color('#ff8a1f'),
+  ok: new THREE.Color('#45e09a'),
+  bad: new THREE.Color('#ff5a4f'),
+};
+const G = { uni: { scan: { value: -1 }, base: { value: 0.05 }, time: { value: 0 } } };
+
+// Circuit board footprint, in scene units (1 unit is roughly 5 cm)
+const PW = 3.8, PD = 2.8;
+const LAYOUT = {
+  mcu: { x: -0.35, z: 0.05, s: 0.62 },
+  flash: { x: 0.72, z: -0.62, w: 0.5, d: 0.3 },
+  drivers: [{ x: 1.02, z: 0.02 }, { x: 1.02, z: 0.42 }, { x: 1.02, z: 0.82 }],
+  caps: [{ x: -1.5, z: -0.95 }, { x: -1.2, z: -0.95 }, { x: -1.5, z: -0.62 }, { x: -1.2, z: -0.62 }, { x: 0.3, z: 0.98 }, { x: 0.56, z: 0.98 }],
+  coils: [{ x: -1.4, z: 0.72 }, { x: -0.95, z: 1.02 }],
+  crystal: { x: -0.9, z: -0.02 },
+  header: { x: 1.72, z: 0, len: 2.3 },
+  leds: [{ x: 1.45, z: -1.2 }, { x: 1.3, z: -1.2 }, { x: 1.15, z: -1.2 }],
+};
+
+function initRenderer() {
+  let r;
+  try {
+    r = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+  } catch (e) {
+    root.classList.add('no-gl');
+    return false;
+  }
+  G.renderer = r;
+  r.setPixelRatio(Math.min(devicePixelRatio, isSmall() ? 1.5 : 1.75));
+  r.toneMapping = THREE.ACESFilmicToneMapping;
+  r.toneMappingExposure = 1.05;
+
+  const scene = (G.scene = new THREE.Scene());
+  scene.background = canvasTex(512, 512, (g, w, h) => {
+    const grd = g.createRadialGradient(w * 0.5, h * 0.46, 0, w * 0.5, h * 0.5, w * 0.62);
+    grd.addColorStop(0, '#111a22');
+    grd.addColorStop(1, '#06080b');
+    g.fillStyle = grd;
+    g.fillRect(0, 0, w, h);
+  });
+  scene.fog = new THREE.Fog('#06080b', 14, 34);
+  G.camera = new THREE.PerspectiveCamera(30, 1, 0.1, 80);
+
+  const pmrem = new THREE.PMREMGenerator(r);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  scene.environmentIntensity = 0.55;
+  new RGBELoader().load(HDRI, (hdr) => {
+    scene.environment = pmrem.fromEquirectangular(hdr).texture;
+    scene.environmentIntensity = 0.62;
+    hdr.dispose();
+    pmrem.dispose();
+  });
+
+  const key = new THREE.DirectionalLight('#ffffff', 1.7);
+  key.position.set(-4, 7, 5);
+  const rim = new THREE.DirectionalLight('#38d4ff', 2.6);
+  rim.position.set(5, 3, -6);
+  const warm = new THREE.DirectionalLight('#ffb27a', 0.5);
+  warm.position.set(6, -2, 4);
+  scene.add(key, rim, warm);
+  G.rim = rim;
+  return true;
+}
+
+/* ============ helpers ============ */
+function canvasTex(w, h, draw, srgb = true) {
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+  // sharper text and traces when the board is seen at a steep angle
+  t.anisotropy = G.renderer ? Math.min(16, G.renderer.capabilities.getMaxAnisotropy()) : 4;
+  return t;
+}
+
+function rrect(w, h, r, path = new THREE.Shape()) {
+  const x = -w / 2, y = -h / 2;
+  path.moveTo(x + r, y);
+  path.lineTo(x + w - r, y);
+  path.quadraticCurveTo(x + w, y, x + w, y + r);
+  path.lineTo(x + w, y + h - r);
+  path.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  path.lineTo(x + r, y + h);
+  path.quadraticCurveTo(x, y + h, x, y + h - r);
+  path.lineTo(x, y + r);
+  path.quadraticCurveTo(x, y, x + r, y);
+  return path;
+}
+
+// Extrude a flat shape upward along +y
+function slab(shape, depth, bevel = 0.02) {
+  const g = new THREE.ExtrudeGeometry(shape, {
+    depth, bevelEnabled: bevel > 0, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 3, curveSegments: 12,
+  });
+  g.rotateX(-Math.PI / 2);
+  return g;
+}
+
+function glowTexture() {
+  return canvasTex(64, 64, (g) => {
+    const grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grd.addColorStop(0, 'rgba(255,255,255,1)');
+    grd.addColorStop(0.22, 'rgba(255,255,255,.6)');
+    grd.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = grd;
+    g.fillRect(0, 0, 64, 64);
+  });
+}
+
+// Fine lengthwise streaks, used as roughness and bump so the aluminium reads as brushed
+function brushedTexture() {
+  const t = canvasTex(512, 512, (g, w, h) => {
+    g.fillStyle = 'rgb(170,170,170)';
+    g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 2600; i++) {
+      const v = 110 + Math.random() * 120, y = Math.random() * h, x = Math.random() * w;
+      g.fillStyle = `rgba(${v},${v},${v},${0.25 + Math.random() * 0.35})`;
+      g.fillRect(x - w, y, 120 + Math.random() * w, Math.random() < 0.8 ? 1 : 2);
+      g.fillRect(x, y, 120 + Math.random() * w, Math.random() < 0.8 ? 1 : 2);
+    }
+  }, false);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+
+/* ============ circuit board texture + trace paths ============ */
+// Route with one 45-degree jog, the way PCB traces are drawn
+function route(ax, az, bx, bz) {
+  const dx = bx - ax, dz = bz - az;
+  const pts = [[ax, az]];
+  if (Math.abs(dx) >= Math.abs(dz)) {
+    const run = ((Math.abs(dx) - Math.abs(dz)) / 2) * Math.sign(dx);
+    pts.push([ax + run, az], [bx - run, bz]);
+  } else {
+    const run = ((Math.abs(dz) - Math.abs(dx)) / 2) * Math.sign(dz);
+    pts.push([ax, az + run], [bx, bz - run]);
+  }
+  pts.push([bx, bz]);
+  return pts;
+}
+
+function buildTraces() {
+  const L = LAYOUT, main = [], power = [], filler = [];
+  // processor -> flash bus (8 lines, short stub north first)
+  for (let i = 0; i < 8; i++) {
+    const x = -0.58 + i * 0.06, sz = -0.4 - (7 - i) * 0.035;
+    main.push([[x, -0.3], ...route(x, sz, 0.45, -0.745 + i * 0.035)]);
+  }
+  // processor -> injector drivers (3 x 3 lines)
+  for (let d = 0; d < 3; d++) for (let k = 0; k < 3; k++) {
+    main.push(route(0.02, -0.18 + (d * 3 + k) * 0.055, 0.87, L.drivers[d].z - 0.06 + k * 0.06));
+  }
+  // drivers -> harness header (12 lines)
+  let n = 0;
+  for (let d = 0; d < 3; d++) for (let k = 0; k < 4; k++) {
+    main.push(route(1.17, L.drivers[d].z - 0.075 + k * 0.05, 1.6, -0.7 + n * 0.13));
+    n++;
+  }
+  // flash -> header (4 lines)
+  for (let k = 0; k < 4; k++) main.push(route(0.99, -0.72 + k * 0.07, 1.6, -1.06 + k * 0.07));
+  // supply rails: capacitors and coils -> processor
+  for (let k = 0; k < 3; k++) power.push(route(-1.04, -0.9 + k * 0.1, -0.7, -0.22 + k * 0.06));
+  power.push(route(-1.22, 0.72, -0.7, 0.24));
+  power.push(route(-0.8, 1.0, -0.28, 0.4));
+  power.push(route(0.2, 0.98, -0.1, 0.4));
+  // inner-layer filler, drawn faint
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  for (let i = 0; i < 46; i++) {
+    const ax = rnd(-1.8, 1.5), az = rnd(-1.3, 1.3);
+    filler.push(route(ax, az, ax + rnd(-0.9, 0.9), az + rnd(-0.5, 0.5)));
+  }
+  return { main, power, filler };
+}
+
+function pcbTextures(tr) {
+  const CW = 2048, CH = Math.round((2048 * PD) / PW);
+  const cx = (x) => ((x + PW / 2) / PW) * CW;
+  const cy = (z) => ((z + PD / 2) / PD) * CH;
+  const U = CW / PW; // pixels per unit
+  const stroke = (g, pts) => {
+    g.beginPath();
+    pts.forEach(([x, z], i) => (i ? g.lineTo(cx(x), cy(z)) : g.moveTo(cx(x), cy(z))));
+    g.stroke();
+  };
+  const via = (g, x, z, r) => {
+    g.beginPath();
+    g.arc(cx(x), cy(z), r, 0, Math.PI * 2);
+    g.fill();
+  };
+  const pads = (g) => {
+    const L = LAYOUT, m = L.mcu, h = m.s / 2;
+    for (let i = 0; i < 36; i++) {
+      const t = -h + 0.03 + (i / 35) * (m.s - 0.06);
+      [[m.x + t, m.z - h - 0.035], [m.x + t, m.z + h + 0.035], [m.x - h - 0.035, m.z + t], [m.x + h + 0.035, m.z + t]].forEach(([x, z], s) => {
+        const vert = s < 2;
+        g.fillRect(cx(x) - (vert ? 3 : 10), cy(z) - (vert ? 10 : 3), vert ? 6 : 20, vert ? 20 : 6);
+      });
+    }
+    for (let i = 0; i < 25; i++) via(g, L.header.x, -1.15 + i * (2.3 / 24), 9);
+  };
+
+  const map = canvasTex(CW, CH, (g) => {
+    g.fillStyle = '#0a211c';
+    g.fillRect(0, 0, CW, CH);
+    const d = g.getImageData(0, 0, CW, CH);
+    for (let i = 0; i < d.data.length; i += 4) {
+      const v = (Math.random() - 0.5) * 8;
+      d.data[i] += v; d.data[i + 1] += v; d.data[i + 2] += v;
+    }
+    g.putImageData(d, 0, 0);
+    g.lineCap = g.lineJoin = 'round';
+    g.strokeStyle = 'rgba(40,110,90,.35)'; g.lineWidth = 5;
+    tr.filler.forEach((p) => stroke(g, p));
+    g.strokeStyle = '#1d5a4a'; g.lineWidth = 7;
+    tr.main.forEach((p) => stroke(g, p));
+    g.lineWidth = 16;
+    tr.power.forEach((p) => stroke(g, p));
+    g.fillStyle = '#c9a55a';
+    tr.main.forEach((p) => via(g, p[0][0], p[0][1], 5));
+    pads(g);
+    // silkscreen
+    g.strokeStyle = 'rgba(220,230,225,.55)'; g.lineWidth = 3;
+    g.fillStyle = 'rgba(220,230,225,.65)';
+    g.font = '600 26px monospace';
+    const L = LAYOUT, lab = (t, x, z) => g.fillText(t, cx(x), cy(z));
+    g.strokeRect(cx(L.mcu.x - 0.4), cy(L.mcu.z - 0.4), 0.8 * U, 0.8 * U);
+    lab('U1', L.mcu.x - 0.4, L.mcu.z - 0.43);
+    lab('U2', L.flash.x - 0.25, L.flash.z - 0.2);
+    L.drivers.forEach((p, i) => lab('U' + (3 + i), p.x + 0.17, p.z + 0.03));
+    L.caps.forEach((p, i) => lab('C' + (1 + i), p.x - 0.1, p.z + 0.2));
+    L.coils.forEach((p, i) => lab('L' + (1 + i), p.x + 0.2, p.z));
+    lab('Y1', L.crystal.x - 0.1, L.crystal.z - 0.1);
+    lab('J1', L.header.x - 0.15, -1.25);
+    g.font = '600 30px monospace';
+    lab('CORE24  ECU-M  24V  REV C', -1.8, 1.3);
+    lab('CAN J1939', 0.9, 1.3);
+  });
+
+  const emissive = canvasTex(CW, CH, (g) => {
+    g.fillStyle = '#000';
+    g.fillRect(0, 0, CW, CH);
+    g.lineCap = g.lineJoin = 'round';
+    g.strokeStyle = '#fff'; g.lineWidth = 8;
+    tr.main.forEach((p) => stroke(g, p));
+    g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 16;
+    tr.power.forEach((p) => stroke(g, p));
+    g.fillStyle = '#fff';
+    tr.main.forEach((p) => via(g, p[0][0], p[0][1], 7));
+    pads(g);
+  });
+  return { map, emissive };
+}
+
+/* ============ ECU model ============ */
+function glowMat(color, k, extra = {}) {
+  return new THREE.MeshBasicMaterial({
+    color: color.clone().multiplyScalar(k), transparent: true, opacity: 0, depthWrite: false,
+    blending: THREE.AdditiveBlending, toneMapped: false, ...extra,
+  });
+}
+
+function scatter(mesh, count, place) {
+  const o = new THREE.Object3D();
+  for (let i = 0; i < count; i++) {
+    place(o, i);
+    o.updateMatrix();
+    mesh.setMatrixAt(i, o.matrix);
+  }
+  mesh.instanceMatrix.needsUpdate = true;
+  return mesh;
+}
+
+function buildModel() {
+  const L = LAYOUT, W = 4.2, D = 3.2, R = 0.3, T = 0.12, WALL = 0.55;
+  const brushed = brushedTexture();
+  const alu = new THREE.MeshStandardMaterial({ color: '#9aa4ae', metalness: 1, roughness: 0.62, roughnessMap: brushed, bumpMap: brushed, bumpScale: 0.25 });
+  const aluDark = new THREE.MeshStandardMaterial({ color: '#5f6871', metalness: 1, roughness: 0.5, roughnessMap: brushed, bumpMap: brushed, bumpScale: 0.25 });
+  const plastic = new THREE.MeshStandardMaterial({ color: '#0e1114', roughness: 0.62, metalness: 0.05 });
+  // chip packages get a thin glossy coat over the satin epoxy
+  const epoxy = new THREE.MeshPhysicalMaterial({ color: '#141719', roughness: 0.5, metalness: 0.1, clearcoat: 0.35, clearcoatRoughness: 0.3 });
+  const silver = new THREE.MeshStandardMaterial({ color: '#c3cad1', metalness: 1, roughness: 0.3 });
+  const copper = new THREE.MeshStandardMaterial({ color: '#b8703a', metalness: 1, roughness: 0.32 });
+  const gold = new THREE.MeshStandardMaterial({ color: '#c9a55a', metalness: 1, roughness: 0.28, emissive: '#ffb347', emissiveIntensity: 0 });
+  G.gold = gold;
+
+  const ecu = (G.ecu = new THREE.Group());
+  G.scene.add(ecu);
+
+  /* ---- base tray ---- */
+  const base = (G.base = new THREE.Group());
+  base.add(new THREE.Mesh(slab(rrect(W, D, R), 0.08), alu));
+  const wallShape = rrect(W, D, R);
+  wallShape.holes.push(rrect(W - 2 * T, D - 2 * T, R - T, new THREE.Path()));
+  const walls = new THREE.Mesh(slab(wallShape, WALL - 0.04), alu);
+  walls.position.y = 0.02;
+  base.add(walls);
+  const ear = rrect(0.62, 0.62, 0.16);
+  const hole = new THREE.Path();
+  hole.absarc(0, 0, 0.11, 0, Math.PI * 2, true);
+  ear.holes.push(hole);
+  const earGeo = slab(ear, 0.07);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    const e = new THREE.Mesh(earGeo, alu);
+    e.position.set(sx * (W / 2 + 0.2), 0, sz * (D / 2 - 0.45));
+    base.add(e);
+  }
+  const socket = new THREE.Mesh(new RoundedBoxGeometry(0.26, 0.4, 2.4, 2, 0.03), plastic);
+  socket.position.set(W / 2 + 0.1, 0.3, 0);
+  base.add(socket);
+  base.add(scatter(new THREE.InstancedMesh(new THREE.CylinderGeometry(0.018, 0.018, 0.2, 8), gold, 44), 44, (o, i) => {
+    o.position.set(W / 2 + 0.2, i < 22 ? 0.24 : 0.36, -1.05 + (i % 22) * 0.1);
+    o.rotation.set(0, 0, Math.PI / 2);
+  }));
+  const seamShape = rrect(W + 0.08, D + 0.08, R + 0.04);
+  seamShape.holes.push(rrect(W - 0.1, D - 0.1, R - 0.05, new THREE.Path()));
+  G.seamMat = glowMat(COL.scan, 3);
+  const seam = new THREE.Mesh(slab(seamShape, 0.015, 0), G.seamMat);
+  seam.position.y = WALL - 0.02;
+  base.add(seam);
+  ecu.add(base);
+
+  /* ---- circuit board ---- */
+  const pcb = (G.pcb = new THREE.Group());
+  const traces = buildTraces();
+  const tex = pcbTextures(traces);
+  const edge = new THREE.MeshStandardMaterial({ color: '#0c2a23', roughness: 0.6 });
+  // glossy solder mask over the board
+  const top = (G.pcbTop = new THREE.MeshPhysicalMaterial({
+    map: tex.map, emissiveMap: tex.emissive, emissive: COL.scan.clone(), emissiveIntensity: 1, roughness: 0.5, metalness: 0.15,
+    clearcoat: 0.6, clearcoatRoughness: 0.28,
+  }));
+  top.onBeforeCompile = (sh) => {
+    sh.uniforms.uScan = G.uni.scan;
+    sh.uniforms.uBase = G.uni.base;
+    sh.fragmentShader = 'uniform float uScan;\nuniform float uBase;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', `
+      #ifdef USE_EMISSIVEMAP
+        vec4 emissiveColor = texture2D( emissiveMap, vEmissiveMapUv );
+        float sd = vEmissiveMapUv.x - uScan;
+        float band = exp( -sd * sd * 900.0 );
+        float wake = smoothstep( -0.5, 0.0, sd ) * step( sd, 0.0 );
+        totalEmissiveRadiance *= emissiveColor.rgb * ( uBase + band * 5.0 + wake * 0.8 );
+      #endif`);
+  };
+  pcb.add(new THREE.Mesh(new THREE.BoxGeometry(PW, 0.06, PD), [edge, edge, top, edge, edge, edge]));
+  const Y = 0.03;
+
+  // main processor with etched top that heats up during the remap
+  const etch = canvasTex(256, 256, (g) => {
+    g.fillStyle = '#17191c'; g.fillRect(0, 0, 256, 256);
+    g.fillStyle = 'rgba(200,205,210,.5)'; g.font = '600 28px monospace';
+    g.fillText('CORE-X', 30, 92); g.font = '500 20px monospace';
+    g.fillText('32-BIT  300MHz', 30, 130); g.fillText('2619  E  ASIL-D', 30, 160);
+    g.beginPath(); g.arc(40, 210, 10, 0, 7); g.fill();
+  });
+  const hot = canvasTex(128, 128, (g) => {
+    const grd = g.createRadialGradient(64, 64, 4, 64, 64, 64);
+    grd.addColorStop(0, '#fff'); grd.addColorStop(0.55, '#777'); grd.addColorStop(1, '#111');
+    g.fillStyle = grd; g.fillRect(0, 0, 128, 128);
+  });
+  G.mcuTop = new THREE.MeshStandardMaterial({ map: etch, emissiveMap: hot, emissive: COL.heat.clone(), emissiveIntensity: 0, roughness: 0.4 });
+  const m = L.mcu, h = m.s / 2;
+  const mcu = new THREE.Mesh(new THREE.BoxGeometry(m.s, 0.07, m.s), [epoxy, epoxy, G.mcuTop, epoxy, epoxy, epoxy]);
+  mcu.position.set(m.x, Y + 0.035, m.z);
+  pcb.add(mcu);
+  pcb.add(scatter(new THREE.InstancedMesh(new THREE.BoxGeometry(0.02, 0.012, 0.07), silver, 144), 144, (o, i) => {
+    const s = Math.floor(i / 36), t = -h + 0.03 + ((i % 36) / 35) * (m.s - 0.06);
+    const p = [[m.x + t, m.z - h - 0.03], [m.x + t, m.z + h + 0.03], [m.x - h - 0.03, m.z + t], [m.x + h + 0.03, m.z + t]][s];
+    o.position.set(p[0], Y + 0.006, p[1]);
+    o.rotation.set(0, s > 1 ? Math.PI / 2 : 0, 0);
+  }));
+
+  // flash memory (TSOP) and injector drivers
+  const f = L.flash;
+  const flash = new THREE.Mesh(new THREE.BoxGeometry(f.w, 0.05, f.d), epoxy);
+  flash.position.set(f.x, Y + 0.025, f.z);
+  pcb.add(flash);
+  pcb.add(scatter(new THREE.InstancedMesh(new THREE.BoxGeometry(0.018, 0.01, 0.05), silver, 28), 28, (o, i) => {
+    o.position.set(f.x - f.w / 2 + 0.03 + (i % 14) * ((f.w - 0.06) / 13), Y + 0.005, f.z + (i < 14 ? -1 : 1) * (f.d / 2 + 0.02));
+    o.rotation.set(0, 0, 0);
+  }));
+  for (const d of L.drivers) {
+    const drv = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.06, 0.26), epoxy);
+    drv.position.set(d.x, Y + 0.03, d.z);
+    const pad = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.006, 0.13), silver);
+    pad.position.y = 0.032;
+    drv.add(pad);
+    pcb.add(drv);
+  }
+
+  // capacitors, coils, crystal, header, status LEDs
+  const sleeve = new THREE.MeshPhysicalMaterial({ color: '#1c2e44', roughness: 0.35, metalness: 0.2, clearcoat: 1, clearcoatRoughness: 0.15 });
+  const capGeo = new THREE.CylinderGeometry(0.11, 0.11, 0.3, 28);
+  for (const c of L.caps) {
+    const cap = new THREE.Mesh(capGeo, [sleeve, silver, sleeve]);
+    cap.position.set(c.x, Y + 0.15, c.z);
+    pcb.add(cap);
+  }
+  const coilGeo = new THREE.TorusGeometry(0.12, 0.05, 14, 48);
+  for (const c of L.coils) {
+    const coil = new THREE.Mesh(coilGeo, copper);
+    coil.rotation.x = Math.PI / 2;
+    coil.position.set(c.x, Y + 0.05, c.z);
+    pcb.add(coil);
+  }
+  const xtal = new THREE.Mesh(new THREE.CapsuleGeometry(0.035, 0.12, 4, 12), silver);
+  xtal.rotation.z = Math.PI / 2;
+  xtal.position.set(L.crystal.x, Y + 0.035, L.crystal.z);
+  pcb.add(xtal);
+  const header = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.12, L.header.len), plastic);
+  header.position.set(L.header.x, Y + 0.06, 0);
+  pcb.add(header);
+  G.leds = ['#45e09a', '#ffb020', '#ff5a4f'].map((c, i) => {
+    const mat = new THREE.MeshStandardMaterial({ color: '#222', emissive: c, emissiveIntensity: 0.4 });
+    const led = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.03, 0.045), mat);
+    led.position.set(L.leds[i].x, Y + 0.015, L.leds[i].z);
+    pcb.add(led);
+    return mat;
+  });
+
+  // small resistors and capacitors in the free spaces
+  const blocked = [[m.x, m.z, 0.46, 0.46], [f.x, f.z, 0.33, 0.24], [1.02, 0.42, 0.2, 0.62], [-1.35, -0.78, 0.3, 0.33], [0.43, 0.98, 0.28, 0.16],
+    [-1.4, 0.72, 0.22, 0.22], [-0.95, 1.02, 0.22, 0.22], [L.crystal.x, L.crystal.z, 0.14, 0.08], [1.72, 0, 0.14, 1.2], [1.3, -1.2, 0.22, 0.08]];
+  const smd = new THREE.InstancedMesh(new THREE.BoxGeometry(0.05, 0.022, 0.028), new THREE.MeshStandardMaterial({ roughness: 0.5 }), 240);
+  const tan = new THREE.Color('#b59a6a'), blk = new THREE.Color('#1b1d20');
+  scatter(smd, 240, (o, i) => {
+    let x, z, tries = 0;
+    do {
+      x = -1.8 + Math.random() * 3.3;
+      z = -1.3 + Math.random() * 2.6;
+      tries++;
+    } while (tries < 40 && blocked.some(([bx, bz, hx, hz]) => Math.abs(x - bx) < hx && Math.abs(z - bz) < hz));
+    o.position.set(x, Y + 0.011, z);
+    o.rotation.set(0, Math.random() < 0.5 ? 0 : Math.PI / 2, 0);
+    smd.setColorAt(i, Math.random() < 0.6 ? tan : blk);
+  });
+  pcb.add(smd);
+
+  // data packets that travel along the traces
+  G.paths = [...traces.main, ...traces.power].map((pts) => {
+    const segs = [];
+    let total = 0;
+    for (let i = 1; i < pts.length; i++) {
+      const len = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+      segs.push({ a: pts[i - 1], b: pts[i], len, at: total });
+      total += len;
+    }
+    return { segs, total };
+  });
+  const NP = isSmall() ? 60 : 96;
+  G.packets = Array.from({ length: NP }, () => ({ p: G.paths[(Math.random() * G.paths.length) | 0], t: Math.random(), v: 0.25 + Math.random() * 0.5 }));
+  G.packetGeo = new THREE.BufferGeometry();
+  G.packetGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(NP * 3), 3));
+  G.packetMat = new THREE.PointsMaterial({
+    size: 0.09, map: glowTexture(), color: COL.scan.clone().multiplyScalar(2.4), transparent: true, opacity: 0,
+    depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false,
+  });
+  const pts = new THREE.Points(G.packetGeo, G.packetMat);
+  pts.frustumCulled = false;
+  pcb.add(pts);
+
+  // diagnostic scan beam: a bright line on the board plus a soft light sheet
+  const scan = (G.scanGroup = new THREE.Group());
+  G.scanLine = glowMat(COL.scan, 4);
+  scan.add(new THREE.Mesh(new THREE.BoxGeometry(0.014, 0.014, PD + 0.1), G.scanLine));
+  const sheetTex = canvasTex(8, 128, (g) => {
+    const grd = g.createLinearGradient(0, 128, 0, 0);
+    grd.addColorStop(0, 'rgba(255,255,255,.9)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = grd; g.fillRect(0, 0, 8, 128);
+  });
+  G.scanSheet = glowMat(COL.scan, 1.3, { map: sheetTex, side: THREE.DoubleSide });
+  const sheet = new THREE.Mesh(new THREE.PlaneGeometry(PD + 0.1, 0.8), G.scanSheet);
+  sheet.rotation.y = Math.PI / 2;
+  sheet.position.y = 0.4;
+  scan.add(sheet);
+  G.scanLight = new THREE.PointLight(COL.scan, 0, 3, 1.5);
+  G.scanLight.position.y = 0.4;
+  scan.add(G.scanLight);
+  scan.position.y = Y + 0.02;
+  pcb.add(scan);
+
+  // heat shockwaves around the processor while flashing
+  G.rings = [0, 1].map(() => {
+    const mat = glowMat(COL.heat, 3, { side: THREE.DoubleSide });
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.44, 0.47, 64), mat);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.set(m.x, Y + 0.02, m.z);
+    pcb.add(ring);
+    return { ring, mat };
+  });
+  G.heatLight = new THREE.PointLight(COL.heat, 0, 3, 1.5);
+  G.heatLight.position.set(m.x, 0.5, m.z);
+  pcb.add(G.heatLight);
+  ecu.add(pcb);
+
+  /* ---- finned lid ---- */
+  const lid = (G.lid = new THREE.Group());
+  lid.add(new THREE.Mesh(slab(rrect(W, D, R), 0.1, 0.03), aluDark));
+  const finGeo = new RoundedBoxGeometry(W - 0.7, 0.28, 0.07, 2, 0.02);
+  for (let i = 0; i < 5; i++) for (const s of [-1, 1]) {
+    const fin = new THREE.Mesh(finGeo, aluDark);
+    fin.position.set(0, 0.24, s * (0.59 + i * 0.19));
+    lid.add(fin);
+  }
+  const badgeTex = canvasTex(1024, 320, (g) => {
+    g.fillStyle = '#000'; g.fillRect(0, 0, 1024, 320);
+    g.fillStyle = '#fff'; g.textAlign = 'center';
+    g.font = '900 150px Arial Black, Arial, sans-serif';
+    g.fillText('CORE24', 512, 190);
+    g.font = '600 38px monospace';
+    g.fillText('ECU-M  ·  24 V  ·  J1939', 512, 262);
+  });
+  G.badge = new THREE.MeshStandardMaterial({
+    color: '#1b2026', metalness: 0.6, roughness: 0.35, emissiveMap: badgeTex, emissive: COL.scan.clone(), emissiveIntensity: 0.15,
+  });
+  const badge = new THREE.Mesh(new RoundedBoxGeometry(2.6, 0.05, 0.8, 2, 0.02), G.badge);
+  badge.position.y = 0.125;
+  lid.add(badge);
+  G.screws = [[-1.9, -1.4], [1.9, -1.4], [-1.9, 1.4], [1.9, 1.4], [-1.9, 0], [1.9, 0]].map(([x, z], i) => {
+    const s = new THREE.Group();
+    s.add(new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.07, 24), silver));
+    const hex = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.072, 6), plastic);
+    s.add(hex);
+    const shank = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.5, 12), silver);
+    shank.position.y = -0.28;
+    s.add(shank);
+    s.position.set(x, 0.135, z);
+    lid.add(s);
+    return { s, i };
+  });
+  lid.position.y = WALL;
+  ecu.add(lid);
+
+  /* ---- harness plug and cables ---- */
+  const plug = (G.plug = new THREE.Group());
+  const body = new THREE.Mesh(new RoundedBoxGeometry(0.55, 0.52, 2.5, 3, 0.06), plastic);
+  body.position.set(W / 2 + 0.5, 0.3, 0);
+  plug.add(body);
+  const lever = new THREE.Mesh(new RoundedBoxGeometry(0.5, 0.06, 2.3, 2, 0.02), plastic);
+  lever.position.set(W / 2 + 0.5, 0.6, 0);
+  plug.add(lever);
+  const loomMat = new THREE.MeshStandardMaterial({ color: '#15181b', roughness: 0.8 });
+  const tube = (pts, r, seg = 80) => new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(...p))), seg, r, 10);
+  plug.add(new THREE.Mesh(tube([[2.8, 0.3, 0.6], [3.4, 0.3, 0.75], [4.2, -0.2, 1.3], [5.2, -0.9, 2.3], [7, -1.4, 3.6]], 0.13), loomMat));
+  plug.add(new THREE.Mesh(tube([[2.8, 0.3, -0.6], [3.4, 0.25, -0.7], [4.3, -0.3, -1.1], [5.6, -1.0, -1.8], [7.5, -1.4, -2.8]], 0.12), loomMat));
+  const diagPts = [[2.8, 0.36, 0], [3.5, 0.55, 0.1], [4.6, 0.25, -0.2], [6.2, -0.5, -0.9], [8.5, -1.2, -1.6]];
+  plug.add(new THREE.Mesh(tube(diagPts, 0.032, 140), loomMat));
+  const pulseTex = canvasTex(256, 4, (g) => {
+    g.fillStyle = '#000'; g.fillRect(0, 0, 256, 4);
+    for (const [x, w] of [[20, 24], [120, 10], [170, 36]]) {
+      const grd = g.createLinearGradient(x, 0, x + w, 0);
+      grd.addColorStop(0, 'rgba(255,255,255,0)'); grd.addColorStop(0.7, '#fff'); grd.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = grd; g.fillRect(x, 0, w, 4);
+    }
+  });
+  pulseTex.wrapS = THREE.RepeatWrapping;
+  pulseTex.repeat.set(9, 1);
+  G.pulseTex = pulseTex;
+  G.cableMat = glowMat(COL.scan, 2.6, { map: pulseTex });
+  plug.add(new THREE.Mesh(tube(diagPts, 0.045, 140), G.cableMat));
+  ecu.add(plug);
+
+  /* ---- callout anchors ---- */
+  const anchor = (parent, x, y, z) => { const o = new THREE.Object3D(); o.position.set(x, y, z); parent.add(o); return o; };
+  G.anchors = [
+    { k: 'A', label: 'Housing / heat sink', o: anchor(lid, -1.3, 0.38, 1.0), dx: -150, dy: -70 },
+    { k: 'B', label: '32-bit processor', o: anchor(pcb, m.x, 0.1, m.z), dx: -170, dy: 40 },
+    { k: 'C', label: 'Flash memory', o: anchor(pcb, f.x, 0.08, f.z), dx: 40, dy: -90 },
+    { k: 'D', label: 'Injector drivers', o: anchor(pcb, 1.02, 0.1, 0.82), dx: 70, dy: 70 },
+    { k: 'E', label: 'Harness connector', o: anchor(plug, W / 2 + 0.5, 0.6, -0.9), dx: 60, dy: -60 },
+  ];
+}
+
+/* ============ floor, dust, post-processing ============ */
+// AO reads a depth pass. Glows, sheets, particles and the background are see-through,
+// so hide them while that pass runs, or they would get darkened as if they were solid.
+function solidOnly(render) {
+  return function (...args) {
+    const hidden = [], bg = G.scene.background;
+    G.scene.background = null;
+    G.scene.traverse((o) => {
+      if (o.visible && (o.isPoints || o.material?.transparent || o.userData.screen)) {
+        o.visible = false;
+        hidden.push(o);
+      }
+    });
+    try {
+      return render.apply(this, args);
+    } finally {
+      hidden.forEach((o) => (o.visible = true));
+      G.scene.background = bg;
+    }
+  };
+}
+
+function buildFX() {
+  const floorMat = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false,
+    uniforms: { uGlow: { value: COL.scan.clone() }, uAmt: { value: 0.35 } },
+    vertexShader: `varying vec3 vW;
+      void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+    fragmentShader: `uniform vec3 uGlow; uniform float uAmt; varying vec3 vW;
+      float grid(vec2 p, float s){ vec2 q = p / s; vec2 g = abs(fract(q - 0.5) - 0.5) / fwidth(q); return 1.0 - min(min(g.x, g.y), 1.0); }
+      void main(){
+        float d = length(vW.xz);
+        float fade = smoothstep(12.0, 1.0, d);
+        float g = (grid(vW.xz, 0.5) * 0.14 + grid(vW.xz, 2.5) * 0.32) * fade;
+        float glow = uAmt * 0.55 * exp(-d * d * 0.2);
+        gl_FragColor = vec4(vec3(0.12, 0.17, 0.22) * g + uGlow * glow, clamp(g * 0.8 + glow, 0.0, 1.0));
+      }`,
+  });
+  // Screen-space backdrop grid behind the model, matching the CSS grid in the sections below:
+  // dots on every corner, segments that show in slowly drifting patches, a few "+" marks and
+  // the odd soft glow in the chapter colour. It fades toward the screen edges, and it steps aside
+  // wherever the diagonal floor grid is visible so the two never cross.
+  G.backdropMat = new THREE.ShaderMaterial({
+    depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending,
+    uniforms: {
+      uTime: { value: 0 }, uCell: { value: 96 }, uDpr: { value: 1 }, uRes: { value: new THREE.Vector2(1, 1) },
+      uTint: { value: COL.scan.clone() }, uAmt: { value: 1 }, uFloorY: { value: -1.3 },
+      uProjInv: { value: G.camera.projectionMatrixInverse }, uCamWorld: { value: G.camera.matrixWorld },
+    },
+    vertexShader: 'void main(){ gl_Position = vec4(position.xy, 0.0, 1.0); }',
+    fragmentShader: `uniform float uTime, uCell, uDpr, uAmt, uFloorY; uniform vec2 uRes; uniform vec3 uTint;
+      uniform mat4 uProjInv, uCamWorld;
+      float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      float noise(vec2 p){
+        vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+        return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y);
+      }
+      void main(){
+        vec2 px = gl_FragCoord.xy / uDpr, uv = gl_FragCoord.xy / uRes;
+        vec2 g = px / uCell, cell = floor(g), f = fract(g) * uCell;
+        vec2 d = min(f, uCell - f);                       // px to the nearest grid lines
+        vec2 corner = floor(g + 0.5);
+        float gap = 7.0;
+        float seg = max((1.0 - smoothstep(0.0, 1.0, d.y)) * step(gap, d.x), (1.0 - smoothstep(0.0, 1.0, d.x)) * step(gap, d.y));
+        float dots = 1.0 - smoothstep(0.7, 1.7, length(d));
+        float plus = step(0.965, hash(corner + 7.0)) * max(step(d.x, 0.6) * step(d.y, 5.5), step(d.y, 0.6) * step(d.x, 5.5));
+        float reveal = smoothstep(0.5, 0.75, noise(cell * 0.16 + vec2(uTime * 0.035, -uTime * 0.025)));
+        float soft = 1.0 - smoothstep(0.0, 0.5, length(fract(g) - 0.5));
+        float lit = step(0.985, hash(cell)) * pow(0.5 + 0.5 * sin(uTime * 0.45 + hash(cell + 3.0) * 6.283), 3.0);
+
+        // strongest around the model, dimming toward every screen edge
+        float edge = 1.0 - smoothstep(0.12, 0.62, length((uv - vec2(0.58, 0.6)) * vec2(1.0, 0.9)));
+
+        // cast this pixel's view ray onto the floor plane; where the floor grid shows, hide the backdrop
+        vec4 v = uProjInv * vec4(uv * 2.0 - 1.0, 1.0, 1.0);
+        vec3 dir = normalize(mat3(uCamWorld) * (v.xyz / v.w));
+        vec3 eye = uCamWorld[3].xyz;
+        float onFloor = 0.0;
+        if (dir.y < 0.0) {
+          vec3 hit = eye + dir * ((uFloorY - eye.y) / dir.y);
+          onFloor = smoothstep(20.0, 9.0, length(hit.xz));
+        }
+
+        vec3 ink = vec3(0.6, 0.68, 0.76);
+        vec3 col = ink * (seg * reveal * 0.1 + dots * 0.2 + plus * 0.26) + uTint * lit * soft * 0.06;
+        gl_FragColor = vec4(col * edge * (1.0 - onFloor) * uAmt, 1.0);
+      }`,
+  });
+  const backdrop = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), G.backdropMat);
+  backdrop.frustumCulled = false;
+  backdrop.renderOrder = -1;
+  backdrop.userData.screen = true;
+  G.scene.add(backdrop);
+
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), floorMat);
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.y = G.backdropMat.uniforms.uFloorY.value;
+  G.scene.add(floor);
+  G.floorMat = floorMat;
+
+  const N = isSmall() ? 180 : 360;
+  const pos = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) {
+    pos[i * 3] = (Math.random() - 0.5) * 16;
+    pos[i * 3 + 1] = -1.2 + Math.random() * 7;
+    pos[i * 3 + 2] = (Math.random() - 0.5) * 14;
+  }
+  const dustGeo = new THREE.BufferGeometry();
+  dustGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  G.dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({
+    size: 0.035, map: glowTexture(), color: '#8fb3c7', transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending,
+  }));
+  G.scene.add(G.dust);
+
+  // The composer renders off-screen, which skips the browser's antialiasing, so give it multisampled buffers
+  const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: HQ ? 4 : 2 });
+  const comp = (G.composer = new EffectComposer(G.renderer, rt));
+  comp.addPass(new RenderPass(G.scene, G.camera));
+  if (HQ) {
+    // contact darkening under chips, between fins and in the tray corners
+    G.ao = new GTAOPass(G.scene, G.camera, 1, 1, undefined, { radius: 0.3, distanceExponent: 1.5, thickness: 1, scale: 1, samples: 16 });
+    G.ao.blendIntensity = 0.9;
+    G.ao.render = solidOnly(G.ao.render);
+    comp.addPass(G.ao);
+  }
+  // a tight radius keeps glows crisp instead of hazing over the model
+  G.bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), 0.65, 0.3, 0.85);
+  comp.addPass(G.bloom);
+  comp.addPass(new OutputPass());
+}
+
+/* ============ scroll choreography ============ */
+gsap.registerPlugin(ScrollTrigger, SplitText);
+const $ = (id) => document.getElementById(id);
+
+const HAS_GL = initRenderer();
+if (HAS_GL) {
+  buildModel();
+  buildFX();
+}
+
+// Everything that animates lives in this object. GSAP scrubs it; the render loop reads it.
+const S = {
+  camX: 3.4, camY: 2.9, camZ: 8.8, tX: 0, tY: 0.25, tZ: 0,
+  baseY: 0, pcbY: 0.3, lidY: 0.55, lidTilt: 0, screwOut: 0, plugX: 0, spin: 0,
+  pins: 0.35, labels: 0, scan: -0.15, scanOn: 0, base: 0.05, flow: 0, warm: 0,
+  faults: 0, heat: 0, flash: 0, odo: 0, chart: 0, seam: 0, logo: 0.15, glow: 0.35, rim: 1,
+};
+
+// Time is measured in screens of scroll: the scene is 800vh tall, so 7 screens of travel.
+// Chapter tops: anatomy 1.0, diagnose 2.7, tune 4.6, deliver 6.5
+// Camera moves use a softer ease so back-to-back moves blend instead of stop-starting
+const CAM_EASE = 'sine.inOut';
+const tl = gsap.timeline({ paused: true, defaults: { ease: 'power2.inOut' } });
+tl.to(S, { camX: 4.4, camY: 3.4, camZ: 7.6, tY: 0.35, duration: 1, ease: CAM_EASE }, 0)
+  // 01 anatomy: take it apart
+  .to(S, { screwOut: 1, duration: 0.45 }, 0.75)
+  .to(S, { lidY: 2.5, lidTilt: -0.22, duration: 0.8 }, 1.0)
+  .to(S, { plugX: 1.4, duration: 0.7 }, 1.15)
+  .to(S, { pcbY: 1.35, baseY: -0.55, duration: 0.8 }, 1.25)
+  .to(S, { camX: 5.6, camY: 6.2, camZ: 8.6, tY: 0.85, duration: 1.2, ease: CAM_EASE }, 1.0)
+  .to(S, { labels: 1, duration: 0.3, ease: 'none' }, 1.75)
+  .to(S, { labels: 0, duration: 0.25, ease: 'none' }, 2.45)
+  // 02 diagnose: scan the board
+  .to(S, { lidY: 5.2, lidTilt: -0.4, duration: 0.6 }, 2.4)
+  .to(S, { camX: 1.9, camY: 5.4, camZ: 4.9, tX: 0.1, tY: 1.1, duration: 0.8, ease: CAM_EASE }, 2.4)
+  .to(S, { scanOn: 1, pins: 1, glow: 0.6, duration: 0.25, ease: 'none' }, 2.75)
+  .to(S, { scan: 1.15, duration: 1.1, ease: 'none' }, 2.8)
+  .to(S, { faults: 3, duration: 0.9, ease: 'none' }, 2.9)
+  .to(S, { base: 0.35, flow: 1, duration: 0.5, ease: 'none' }, 3.3)
+  .to(S, { camX: -0.9, camY: 5.0, camZ: 5.0, tX: -0.1, duration: 1.0, ease: CAM_EASE }, 3.2)
+  .to(S, { scanOn: 0, duration: 0.2, ease: 'none' }, 3.9)
+  // 03 tune: heat up the processor and write the map
+  .to(S, { camX: -1.8, camY: 2.9, camZ: 3.6, tX: -0.35, tY: 1.4, tZ: 0.05, duration: 0.9, ease: CAM_EASE }, 4.2)
+  // the close-up looks straight into the rim light, which glares off the bare tray, so dim it
+  .to(S, { rim: 0.05, duration: 1.0, ease: CAM_EASE }, 4.0)
+  .to(S, { warm: 1, duration: 0.4, ease: 'none' }, 4.35)
+  .to(S, { heat: 1, duration: 0.4 }, 4.6)
+  .to(S, { flash: 1, duration: 1.0, ease: 'none' }, 4.75)
+  .to(S, { odo: 1, chart: 1, duration: 0.9, ease: 'power1.inOut' }, 4.85)
+  .to(S, { camX: -2.6, camY: 3.3, camZ: 4.6, duration: 0.7, ease: CAM_EASE }, 5.1)
+  // 04 deliver: put it back together and light it up
+  .to(S, { heat: 0, flow: 0.4, warm: 0, duration: 0.4 }, 5.85)
+  .to(S, { camX: 3.9, camY: 2.1, camZ: 8.0, tX: 0, tY: 0.3, tZ: 0, duration: 1.0, ease: CAM_EASE }, 5.9)
+  .to(S, { rim: 1, duration: 1.0, ease: CAM_EASE }, 5.9)
+  .to(S, { plugX: 0, pcbY: 0.3, baseY: 0, duration: 0.7 }, 5.9)
+  .to(S, { lidY: 0.55, lidTilt: 0, duration: 0.8 }, 6.0)
+  .to(S, { spin: 0.6, duration: 1.0, ease: 'none' }, 6.0)
+  .to(S, { screwOut: 0, duration: 0.4 }, 6.55)
+  .to(S, { seam: 1, logo: 1.6, glow: 0.8, base: 0.05, pins: 0.6, duration: 0.3, ease: 'none' }, 6.6)
+  .to(S, { flow: 0, duration: 0.2 }, 6.6)
+  .set({}, {}, 7);
+
+const rail = $('rail');
+const railItems = [...rail.querySelectorAll('li')];
+const cache = {};
+const put = (key, val, fn) => {
+  if (cache[key] !== val) {
+    cache[key] = val;
+    fn(val);
+  }
+};
+function updateRail(p) {
+  rail.style.setProperty('--p', p.toFixed(4));
+  const u = p * 7;
+  const idx = u < 0.6 ? -1 : u < 2.35 ? 0 : u < 4.25 ? 1 : u < 6.05 ? 2 : 3;
+  put('rail', idx, (k) => railItems.forEach((li, i) => li.classList.toggle('on', i === k)));
+}
+
+const sceneST = ScrollTrigger.create({
+  trigger: '#scene', start: 'top top', end: 'bottom bottom',
+  scrub: REDUCE ? true : 1.5, animation: tl, onUpdate: (self) => updateRail(self.progress),
+});
+
+/* ---- smooth scrolling ---- */
+let lenis = null;
+if (!REDUCE) {
+  lenis = new Lenis({ lerp: 0.075, wheelMultiplier: 0.9 });
+  lenis.on('scroll', ScrollTrigger.update);
+  gsap.ticker.add((time) => lenis.raf(time * 1000));
+  gsap.ticker.lagSmoothing(0);
+}
+document.querySelectorAll('a[href^="#"]').forEach((a) => a.addEventListener('click', (e) => {
+  const el = document.querySelector(a.getAttribute('href'));
+  if (!el) return;
+  e.preventDefault();
+  const offset = el.classList.contains('chapter') ? innerHeight * 0.35 : 0;
+  const top = el.getBoundingClientRect().top + scrollY + offset - (parseFloat(getComputedStyle(el).scrollMarginTop) || 0);
+  // A long jump would fast-forward or rewind the whole 3D story, so cut straight there instead
+  // and finish the lagging scrub at once so the model doesn't visibly catch up.
+  const far = Math.abs(top - scrollY) > innerHeight * 1.5;
+  if (lenis) lenis.scrollTo(top, far ? { immediate: true, force: true } : { duration: 1.6 });
+  else window.scrollTo({ top });
+  if (far) {
+    ScrollTrigger.update();
+    sceneST.getTween()?.progress(1);
+  }
+}));
+
+/* ---- headline reveals ---- */
+const heroSplit = SplitText.create('#hero-title', { type: 'words,chars', charsClass: 'ch', mask: 'words' });
+if (!REDUCE) {
+  gsap.from(heroSplit.chars, { yPercent: 110, duration: 1, ease: 'expo.out', stagger: 0.022, delay: 0.1 });
+  gsap.from('.hero .eyebrow, .hero .lede, .hero .ctas, .hero .specs', { y: 16, opacity: 0, duration: 0.9, ease: 'power3.out', stagger: 0.07, delay: 0.4 });
+}
+document.fonts.ready.then(() => {
+  document.querySelectorAll('.split').forEach((h) => {
+    const chapter = h.closest('.chapter');
+    const acc = getComputedStyle(chapter).getPropertyValue('--acc').trim() || '#38d4ff';
+    const split = SplitText.create(h, { type: 'words,chars', charsClass: 'ch' });
+    gsap.set(split.chars, { opacity: 0.22 });
+    gsap.timeline({ scrollTrigger: { trigger: chapter, start: 'top 85%', end: 'top 25%', scrub: true } })
+      .to(split.chars, { opacity: 1, color: acc, stagger: 0.04, duration: 0.25, ease: 'none' }, 0)
+      .to(split.chars, { color: '#e7edf2', stagger: 0.04, duration: 0.25, ease: 'none' }, 0.2);
+  });
+  ScrollTrigger.refresh();
+});
+
+/* ---- rolling odometer digits ---- */
+const odos = [...document.querySelectorAll('.odometer')].map((el) => {
+  const n = Math.max(el.dataset.from.length, el.dataset.to.length);
+  const a = el.dataset.from.padStart(n, '0'), b = el.dataset.to.padStart(n, '0');
+  el.textContent = '';
+  el.setAttribute('role', 'img');
+  el.setAttribute('aria-label', el.dataset.to);
+  return [...a].map((ch, i) => {
+    const wheel = document.createElement('span');
+    wheel.className = 'wheel';
+    const strip = document.createElement('span');
+    strip.innerHTML = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((d) => `<b>${d}</b>`).join('');
+    wheel.appendChild(strip);
+    el.appendChild(wheel);
+    const s = +ch, e = +b[i];
+    return { strip, s, steps: (e - s + 10) % 10 || (i === n - 1 ? 10 : 0) };
+  });
+});
+const setOdo = (p) => odos.flat().forEach((c) => (c.strip.style.transform = `translateY(${-((c.s + c.steps * p) % 10)}em)`));
+setOdo(0);
+
+/* ---- HUD panels ---- */
+const faultEls = [...document.querySelectorAll('#faults li')];
+const flashSteps = [...document.querySelectorAll('#flash-steps li')];
+const flashBar = $('flash-bar'), chart = $('chart');
+const live = ['v-boost', 'v-rail', 'v-egt', 'v-cool'].map((id) => $(id).firstChild);
+let lastLive = 0;
+function updateHUD(t) {
+  put('faults', Math.floor(S.faults + 0.7), (n) => {
+    faultEls.forEach((li, i) => li.classList.toggle('on', i < n));
+    $('diag-state').textContent = n === 0 ? 'Scanning' : n < 3 ? 'Reading codes' : '3 faults found';
+    $('diag-dot').classList.toggle('ok', n === 0);
+  });
+  if (t - lastLive > 0.12) {
+    lastLive = t;
+    live[0].nodeValue = (2.41 + Math.sin(t * 1.7) * 0.05 + (Math.random() - 0.5) * 0.02).toFixed(2);
+    live[1].nodeValue = Math.round(1840 + Math.sin(t * 0.9) * 30 + (Math.random() - 0.5) * 8);
+    live[2].nodeValue = Math.round(412 + Math.sin(t * 0.6) * 5);
+    live[3].nodeValue = Math.round(86 + Math.sin(t * 0.3) * 0.8);
+  }
+  put('flash', Math.round(S.flash * 100), (p) => {
+    flashBar.style.setProperty('--f', p / 100);
+    $('flash-pct').textContent = p + '%';
+    $('flash-label').textContent = p === 0 ? 'Connected, ready to read' : p < 35 ? 'Backing up original map' : p < 55 ? 'Correcting checksum' : p < 100 ? 'Writing new map' : 'Map written and verified';
+    flashSteps.forEach((li, i) => li.classList.toggle('on', p >= [35, 55, 100][i]));
+  });
+  put('odo', Math.round(S.odo * 1000), (v) => setOdo(v / 1000));
+  put('chart', Math.round(S.chart * 500), (v) => chart.style.setProperty('--d', (1 - v / 500).toFixed(3)));
+}
+
+/* ---- 3D callout labels ---- */
+const calloutsEl = $('callouts'), linesSvg = $('callout-lines');
+const SVGNS = 'http://www.w3.org/2000/svg';
+const tags = HAS_GL ? G.anchors.map((a) => {
+  const el = document.createElement('div');
+  el.className = 'tag';
+  el.style.opacity = '1';
+  el.innerHTML = `<b>${a.k}</b><span>${a.label}</span>`;
+  calloutsEl.appendChild(el);
+  const line = document.createElementNS(SVGNS, 'line');
+  const dot = document.createElementNS(SVGNS, 'circle');
+  dot.setAttribute('r', '3');
+  linesSvg.append(line, dot);
+  return { ...a, el, line, dot };
+}) : [];
+function updateCallouts(w, h) {
+  put('labels', S.labels.toFixed(2), (v) => (calloutsEl.style.opacity = v));
+  if (S.labels < 0.01) return;
+  const k = w < 820 ? 0.35 : 1, v = new THREE.Vector3();
+  for (const t of tags) {
+    t.o.getWorldPosition(v).project(G.camera);
+    const x = (v.x * 0.5 + 0.5) * w, y = (-v.y * 0.5 + 0.5) * h;
+    const tx = x + t.dx * k, ty = y + t.dy * k;
+    t.el.style.transform = `translate(${tx}px, ${ty}px) translate(${t.dx < 0 ? '-100%' : '0'}, -50%)`;
+    t.line.setAttribute('x1', x); t.line.setAttribute('y1', y);
+    t.line.setAttribute('x2', tx); t.line.setAttribute('y2', ty);
+    t.dot.setAttribute('cx', x); t.dot.setAttribute('cy', y);
+  }
+}
+
+/* ---- layout, pointer, cursor label ---- */
+function layout() {
+  if (!HAS_GL) return;
+  const w = stageEl.clientWidth, h = stageEl.clientHeight, a = w / h;
+  G.renderer.setSize(w, h, false);
+  G.composer.setSize(w, h);
+  const pr = G.renderer.getPixelRatio(), bd = G.backdropMat.uniforms;
+  bd.uDpr.value = pr;
+  bd.uRes.value.set(w * pr, h * pr);
+  bd.uCell.value = w < 620 ? 64 : 96;
+  G.camera.aspect = a;
+  G.camera.fov = a < 0.8 ? 46 : a < 1.25 ? 38 : 30;
+  G.dist = a < 0.8 ? 1.05 : a < 1.25 ? 1.2 : 1.38;
+  // desktop: push the model right of the copy; phones: lift it above the copy
+  G.camera.setViewOffset(w, h, w >= 820 ? -w * (w >= 1100 ? 0.19 : 0.15) : 0, w >= 820 ? 0 : h * 0.17, w, h);
+}
+layout();
+addEventListener('resize', layout);
+
+const mouse = { x: 0, y: 0, sx: 0, sy: 0 };
+addEventListener('pointermove', (e) => {
+  mouse.x = e.clientX / innerWidth - 0.5;
+  mouse.y = e.clientY / innerHeight - 0.5;
+}, { passive: true });
+
+const cursor = $('cursor'), hint = $('hint');
+if (FINE && !REDUCE) {
+  let cx = innerWidth / 2, cy = innerHeight / 2, tx = cx, ty = cy;
+  addEventListener('pointermove', (e) => {
+    tx = e.clientX + 18;
+    ty = e.clientY + 18;
+    cursor.classList.toggle('show', scrollY < 300 && !e.target.closest('a,button,input,select,textarea'));
+  }, { passive: true });
+  gsap.ticker.add(() => {
+    cx += (tx - cx) * 0.12;
+    cy += (ty - cy) * 0.12;
+    cursor.style.transform = `translate(${cx}px, ${cy}px)`;
+  });
+}
+addEventListener('scroll', () => {
+  if (scrollY > 300) cursor.classList.remove('show');
+  hint.style.opacity = scrollY > 80 ? '0' : '1';
+}, { passive: true });
+
+$('book-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  $('form-msg').hidden = false;
+});
+
+// "+" marks fade toward the left and right screen edges, matching the backdrop grid
+const crossFade = (x) => {
+  const t = Math.min(1, Math.max(0, (Math.abs(x / innerWidth - 0.5) - 0.12) / 0.4));
+  return (0.6 * (1 - t * t * (3 - 2 * t))).toFixed(3);
+};
+function fadeCrosses() {
+  document.querySelectorAll('.services article, .makes li').forEach((el) => {
+    const r = el.getBoundingClientRect();
+    el.style.setProperty('--o', crossFade(r.left));
+    el.style.setProperty('--o2', crossFade(r.right));
+  });
+}
+fadeCrosses();
+addEventListener('resize', fadeCrosses);
+document.fonts.ready.then(fadeCrosses);
+
+/* ============ render loop ============ */
+let visible = true, last = performance.now();
+ScrollTrigger.create({ trigger: '#scene', start: 'top bottom', end: 'bottom top', onToggle: (s) => (visible = s.isActive) });
+const tgt = HAS_GL ? new THREE.Vector3() : null, tint = HAS_GL ? new THREE.Color() : null;
+
+function frame() {
+  const now = performance.now(), dt = Math.min((now - last) / 1000, 0.05), t = now / 1000;
+  last = now;
+  updateHUD(t);
+  if (!HAS_GL || !visible || document.hidden) return;
+  const w = stageEl.clientWidth, h = stageEl.clientHeight, idle = REDUCE ? 0 : 1;
+
+  mouse.sx += (mouse.x - mouse.sx) * 0.05;
+  mouse.sy += (mouse.y - mouse.sy) * 0.05;
+  tgt.set(S.tX, S.tY, S.tZ);
+  G.camera.position.set(S.camX - S.tX, S.camY - S.tY, S.camZ - S.tZ).multiplyScalar(G.dist).add(tgt);
+  G.camera.position.x += mouse.sx * 0.9 * idle;
+  G.camera.position.y -= mouse.sy * 0.5 * idle;
+  G.camera.lookAt(tgt);
+
+  G.ecu.rotation.y = -0.18 + S.spin + Math.sin(t * 0.25) * 0.06 * idle;
+  G.ecu.position.y = Math.sin(t * 0.8) * 0.04 * idle;
+  G.base.position.y = S.baseY;
+  G.pcb.position.y = S.pcbY + Math.sin(t * 1.1) * 0.025 * idle * Math.min(1, (S.pcbY - 0.3) / 1.05);
+  G.lid.position.y = S.lidY;
+  G.lid.rotation.x = S.lidTilt;
+  G.plug.position.x = S.plugX;
+  for (const { s, i } of G.screws) {
+    s.position.y = 0.135 + S.screwOut * (0.9 + (i % 3) * 0.18);
+    s.rotation.y = S.screwOut * (7 + i);
+  }
+
+  // cyan while diagnosing, amber while tuning
+  tint.copy(COL.scan).lerp(COL.heat, S.warm);
+  G.pcbTop.emissive.copy(tint);
+  G.packetMat.color.copy(tint).multiplyScalar(2.4);
+  G.cableMat.color.copy(tint).multiplyScalar(2.6);
+  G.floorMat.uniforms.uGlow.value.copy(tint);
+  G.backdropMat.uniforms.uTint.value.copy(tint).lerp(COL.ok, S.seam);
+  G.backdropMat.uniforms.uTime.value = REDUCE ? 0 : t;
+  G.floorMat.uniforms.uAmt.value = S.glow * (0.85 + 0.15 * Math.sin(t * 1.3));
+  G.rim.intensity = 2.6 * S.rim;
+  G.uni.scan.value = S.scan;
+  G.uni.base.value = S.base + S.warm * 0.25;
+
+  G.scanGroup.visible = S.scanOn > 0.01;
+  G.scanGroup.position.x = S.scan * PW - PW / 2;
+  G.scanLine.opacity = S.scanOn;
+  G.scanSheet.opacity = S.scanOn * 0.55;
+  G.scanLight.intensity = S.scanOn * 2.5;
+
+  G.packetMat.opacity = S.flow;
+  if (S.flow > 0.01) {
+    const arr = G.packetGeo.attributes.position.array, speed = 0.6 + S.flash * 1.6;
+    G.packets.forEach((pk, i) => {
+      pk.t += (dt * pk.v * speed) / pk.p.total;
+      if (pk.t > 1) {
+        pk.t = 0;
+        // while tuning, most packets run down the bus into the flash chip
+        pk.p = S.warm > 0.5 && Math.random() < 0.7 ? G.paths[(Math.random() * 8) | 0] : G.paths[(Math.random() * G.paths.length) | 0];
+      }
+      const d = pk.t * pk.p.total;
+      const sg = pk.p.segs.find((q) => d <= q.at + q.len) || pk.p.segs[pk.p.segs.length - 1];
+      const f = sg.len ? (d - sg.at) / sg.len : 0;
+      arr[i * 3] = sg.a[0] + (sg.b[0] - sg.a[0]) * f;
+      arr[i * 3 + 1] = 0.05;
+      arr[i * 3 + 2] = sg.a[1] + (sg.b[1] - sg.a[1]) * f;
+    });
+    G.packetGeo.attributes.position.needsUpdate = true;
+  }
+
+  G.cableMat.opacity = 0.12 + 0.88 * Math.max(S.flow, S.scanOn, S.heat);
+  G.pulseTex.offset.x -= dt * (0.3 + S.flash * 0.9);
+  G.gold.emissiveIntensity = S.pins * (0.7 + 0.3 * Math.sin(t * 3));
+  G.mcuTop.emissiveIntensity = S.heat * (1.8 + 0.6 * Math.sin(t * 6));
+  G.heatLight.intensity = S.heat * 3;
+  const flashing = S.flash > 0.01 && S.flash < 0.99 ? S.heat : 0;
+  G.rings.forEach(({ ring, mat }, i) => {
+    const k = (t * 0.8 + i * 0.5) % 1;
+    ring.scale.setScalar(1 + k * 2.2);
+    mat.opacity = (1 - k) * flashing;
+  });
+  const faulty = S.faults > 0.3 && S.warm < 0.5;
+  G.leds[0].emissiveIntensity = faulty ? 0.3 : 2.2;
+  G.leds[1].emissiveIntensity = flashing ? (Math.sin(t * 14) > 0 ? 3 : 0.2) : 0.3;
+  G.leds[2].emissiveIntensity = faulty ? (Math.sin(t * 5) > 0 ? 3 : 0.3) : 0.15;
+  G.seamMat.opacity = S.seam * (0.8 + 0.2 * Math.sin(t * 2));
+  G.badge.emissiveIntensity = S.logo * (0.85 + 0.15 * Math.sin(t * 2));
+  G.dust.rotation.y = t * 0.02 * idle;
+
+  updateCallouts(w, h);
+  G.composer.render();
+}
+gsap.ticker.add(frame);
+updateRail(0);
+</script>
+
+<script src="/js/menu.js"></script>
+</body></html>

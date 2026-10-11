@@ -1,0 +1,55 @@
+@page "/admin/mods"
+@model Core24.Web.Pages.Admin.ModsModel
+@using System.Globalization
+@{
+    ViewData["Title"] = "Price list";
+    ViewData["MainClass"] = "wide";
+}
+<div class="head">
+    <p class="eyebrow"><a asp-page="/Admin/Index">Orders</a> / Price list</p>
+    <h1>Price list</h1>
+    <p class="lede">What customers can choose on the order form. Price changes apply to new orders only. Untick "Active" to stop offering a mod without deleting it.</p>
+</div>
+
+@if (Model.Flash is not null)
+{
+    <div class="notice">@Model.Flash</div>
+}
+
+@* One small form per row: each "Save" sends just that mod. *@
+<div class="card table-wrap">
+    <table>
+        <thead><tr><th>Name</th><th>Description</th><th class="num">Price (@Model.Currency)</th><th>Order</th><th>Active</th><th></th></tr></thead>
+        <tbody>
+            @foreach (var m in Model.Mods)
+            {
+                <tr>
+                    <td><input form="mod-@m.Id" name="Input.Name" value="@m.Name" required></td>
+                    <td><input form="mod-@m.Id" name="Input.Description" value="@m.Description"></td>
+                    <td><input form="mod-@m.Id" name="Input.Price" value="@((m.PriceCents / 100m).ToString("0.00", CultureInfo.InvariantCulture))" inputmode="decimal" style="width:8rem"></td>
+                    <td><input form="mod-@m.Id" name="Input.SortOrder" value="@m.SortOrder" type="number" style="width:5rem"></td>
+                    <td><input form="mod-@m.Id" name="Input.IsActive" value="true" type="checkbox" checked="@m.IsActive"></td>
+                    <td>
+                        <form id="mod-@m.Id" method="post" asp-page-handler="Save">
+                            <input type="hidden" name="Input.Id" value="@m.Id">
+                            <button class="btn small" type="submit">Save</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+            <tr>
+                <td><input form="mod-new" name="Input.Name" placeholder="New mod" required></td>
+                <td><input form="mod-new" name="Input.Description"></td>
+                <td><input form="mod-new" name="Input.Price" placeholder="0.00" inputmode="decimal" style="width:8rem"></td>
+                <td><input form="mod-new" name="Input.SortOrder" value="100" type="number" style="width:5rem"></td>
+                <td><input form="mod-new" name="Input.IsActive" value="true" type="checkbox" checked></td>
+                <td>
+                    <form id="mod-new" method="post" asp-page-handler="Save">
+                        <button class="btn small primary" type="submit">Add</button>
+                    </form>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<p class="hint">Use a dot for decimals: 290.50.</p>

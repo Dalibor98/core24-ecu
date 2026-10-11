@@ -1,0 +1,34 @@
+@page "/account"
+@model Core24.Web.Pages.Account.IndexModel
+@{
+    ViewData["Title"] = "My orders";
+}
+<div class="head">
+    <p class="eyebrow">Account · @User.Identity?.Name</p>
+    <h1>My orders</h1>
+</div>
+
+@if (Model.Orders.Count == 0)
+{
+    <div class="notice">No orders yet. <a asp-page="/Orders/New">Send your first file.</a></div>
+}
+else
+{
+    <div class="card table-wrap">
+        <table>
+            <thead><tr><th>Order</th><th>Date</th><th>Vehicle</th><th>Status</th><th class="num">Total</th></tr></thead>
+            <tbody>
+                @foreach (var o in Model.Orders)
+                {
+                    <tr>
+                        <td><a class="mono" href="/o/@o.AccessToken">@o.Reference</a></td>
+                        <td>@o.CreatedAtUtc.ToString("d MMM yyyy")</td>
+                        <td>@o.VehicleMake @o.VehicleModel</td>
+                        <td><span class="status @o.Status">@o.Status</span></td>
+                        <td class="num">@Money.Format(o.TotalCents, o.Currency)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

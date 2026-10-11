@@ -1,0 +1,116 @@
+@page "/o/{token}"
+@model Core24.Web.Pages.Orders.DetailsModel
+@{
+    var o = Model.Order;
+    ViewData["Title"] = $"Order {o.Reference}";
+}
+@if (Model.ReturnedFromPayment)
+{
+    @* Stripe redirects the browser back before (or after) it calls our webhook. Wait for the webhook, don't trust the redirect. *@
+    <meta http-equiv="refresh" content="4">
+}
+
+<div class="head">
+    <p class="eyebrow">Order <span class="mono">@o.Reference</span> · @o.CreatedAtUtc.ToString("d MMM yyyy")</p>
+    <h1>@o.VehicleMake @o.VehicleModel</h1>
+    <partial name="_StatusSteps" model="o.Status" />
+</div>
+
+@if (Model.JustCreated)
+{
+    <div class="notice ok">
+        Thank you, we received your order. We've emailed you a link to this page. <b>Keep that email:</b> the link is your access to the order.
+    </div>
+}
+@if (Model.Error is not null)
+{
+    <div class="notice bad">@Model.Error</div>
+}
+
+@switch (o.Status)
+{
+    case OrderStatus.Submitted:
+    case OrderStatus.InProgress:
+        <div class="notice">We're working on your file. You'll get an email when it's ready.</div>
+        break;
+
+    case OrderStatus.Ready when Model.ReturnedFromPayment:
+        <div class="notice">Confirming your payment… this page refreshes by itself in a few seconds.</div>
+        break;
+
+    case OrderStatus.Ready:
+        <section class="card">
+            <h2>Your file is ready</h2>
+            <p>Pay <b>@Money.Format(o.TotalCents, o.Currency)</b> to unlock the download.</p>
+            <form method="post" asp-page-handler="Pay" asp-route-token="@o.AccessToken">
+                <button class="btn primary" type="submit">Pay @Money.Format(o.TotalCents, o.Currency)</button>
+            </form>
+        </section>
+        break;
+
+    case OrderStatus.Paid:
+        <section class="card">
+            <h2>Download</h2>
+            <p class="muted">Each link works for @((int)Core24.Web.Features.Downloads.DownloadLinks.Lifetime.TotalMinutes) minutes. Reopen this page any time for fresh ones.</p>
+            <ul class="files">
+                @foreach (var f in o.ModifiedFiles)
+                {
+                    <li>
+                        <span class="name">@f.FileName</span>
+                        <span class="muted mono">@((f.SizeBytes / 1024.0).ToString("N0")) KB · MD5 @f.Md5</span>
+                        <span><a class="btn primary small" href="@Model.DownloadUrls[f.Id]">Download</a></span>
+                    </li>
+                }
+            </ul>
+        </section>
+        break;
+
+    case OrderStatus.Cancelled:
+        <div class="notice warn">This order was cancelled. Reply to any of our emails if you have questions.</div>
+        break;
+}
+
+<section class="card">
+    <h2>What you ordered</h2>
+    <div class="table-wrap">
+        <table>
+            @foreach (var item in o.Items)
+            {
+                <tr><td>@item.ModName</td><td class="num">@Money.Format(item.PriceCents, o.Currency)</td></tr>
+            }
+            <tr class="total"><td>Total</td><td class="num">@Money.Format(o.TotalCents, o.Currency)</td></tr>
+        </table>
+    </div>
+</section>
+
+<section class="card">
+    <h2>Your files</h2>
+    <ul class="files">
+        @foreach (var f in o.OriginalFiles)
+        {
+            <li>
+                <span class="name">@f.FileName</span>
+                <span class="muted mono">@((f.SizeBytes / 1024.0).ToString("N0")) KB · MD5 @f.Md5</span>
+                @if (f.EcuType is not null)
+                {
+                    <span class="muted">@EcuFileName.DescribeEcu(f.EcuType) · @EcuFileName.DescribeMemory(f.MemoryArea)</span>
+                }
+                @if (f.NameChecksumMatches == false)
+                {
+                    <span class="notice warn">The checksum in this file's name doesn't match its contents. We'll check it and contact you if needed.</span>
+                }
+            </li>
+        }
+    </ul>
+    <dl class="facts">
+        @if (o.Vin is not null)
+        {
+            <dt>VIN</dt><dd class="mono">@o.Vin</dd>
+        }
+        <dt>Contact</dt><dd>@o.CustomerName · @o.CustomerEmail @(o.CustomerPhone is null ? "" : $"· {o.CustomerPhone}")</dd>
+        @if (o.CustomerNote is not null)
+        {
+            <dt>Message</dt><dd>@o.CustomerNote</dd>
+        }
+    </dl>
+</section>
