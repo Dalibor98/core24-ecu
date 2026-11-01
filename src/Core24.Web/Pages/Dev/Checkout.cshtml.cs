@@ -22,7 +22,7 @@ public class CheckoutModel(AppDbContext db, IPaymentGateway gateway, PaymentServ
     public async Task<IActionResult> OnPostPayAsync(string sessionId, CancellationToken ct)
     {
         if (!await LoadAsync(sessionId, ct)) return NotFound();
-        await payments.CompleteAsync(Payment.SessionId, Payment.AmountCents, Payment.Currency, ct);
+        await payments.CompleteAsync(Payment.SessionId, Payment.AmountCents, Payment.Currency, providerPaymentId: "dev_pi_" + Payment.Id, ct: ct);
         return Redirect($"/o/{OrderToken}?paid=1");
     }
 

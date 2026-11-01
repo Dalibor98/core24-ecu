@@ -1,5 +1,6 @@
 using Core24.Web.Data;
 using Core24.Web.Features.Orders;
+using Core24.Web.Features.Payments;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +13,7 @@ namespace Core24.Web.Pages.Admin;
 /// </summary>
 [RequestSizeLimit(UploadOptions.MaxRequestBytes)]
 [RequestFormLimits(MultipartBodyLengthLimit = UploadOptions.MaxRequestBytes)]
-public class OrderModel(AppDbContext db, OrderService orders) : PageModel
+public class OrderModel(AppDbContext db, OrderService orders, PaymentService payments) : PageModel
 {
     public Order Order { get; private set; } = null!;
 
@@ -60,6 +61,13 @@ public class OrderModel(AppDbContext db, OrderService orders) : PageModel
     public async Task<IActionResult> OnPostCancelAsync(Guid id, CancellationToken ct)
     {
         Flash = await orders.CancelAsync(id, ct) ? "Order cancelled." : "This order can't be cancelled any more.";
+        return RedirectToPage(new { id });
+    }
+
+    public async Task<IActionResult> OnPostRefundAsync(Guid id, int paymentId, CancellationToken ct)
+    {
+        var error = await payments.RefundAsync(id, paymentId, ct);
+        Flash = error ?? "Refunded. The customer got an email; the download is locked again.";
         return RedirectToPage(new { id });
     }
 }

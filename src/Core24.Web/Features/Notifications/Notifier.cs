@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using Core24.Web.Features.Contact;
 using Core24.Web.Features.Orders;
 using Core24.Web.Features.Storage;
 using Microsoft.Extensions.Options;
@@ -78,6 +79,31 @@ public class Notifier(
         await SendSafelyAsync(new EmailMessage(Email.WorkshopAddress, $"Paid: order {order.Reference}", Layout(workshop)), ct);
     }
 
+    /// <summary>To the customer: a gentle reminder that a ready file is waiting for payment.</summary>
+    public async Task PaymentReminderAsync(Order order, CancellationToken ct = default)
+    {
+        var body = new StringBuilder()
+            .Append(P($"Hello {H(order.CustomerName)},"))
+            .Append(P($"your modified file for order <b>{H(order.Reference)}</b> has been ready since {order.ReadyAtUtc:d MMM yyyy}, but it isn't paid yet."))
+            .Append(P($"Total: <b>{H(Money.Format(order.TotalCents, order.Currency))}</b>. The download unlocks as soon as the payment is confirmed."))
+            .Append(Button("Pay and download", OrderLink(order)))
+            .Append(P("Questions, or don't need the file any more? Just reply to this email."));
+
+        await SendSafelyAsync(new EmailMessage(order.CustomerEmail, $"Reminder: your file for order {order.Reference} is waiting", Layout(body.ToString()))
+        {
+            ReplyTo = Email.WorkshopAddress,
+        }, ct);
+    }
+
+    /// <summary>To the customer: the money is on its way back.</summary>
+    public async Task OrderRefundedAsync(Order order, long amountCents, string currency, CancellationToken ct = default)
+    {
+        var body = P($"Hello {H(order.CustomerName)},")
+            + P($"we refunded <b>{H(Money.Format(amountCents, currency))}</b> for order <b>{H(order.Reference)}</b>. Banks usually show the money on your card within 5 to 10 days.")
+            + P("Questions? Reply to this email.");
+        await SendSafelyAsync(new EmailMessage(order.CustomerEmail, $"Refund for order {order.Reference}", Layout(body)) { ReplyTo = Email.WorkshopAddress }, ct);
+    }
+
     public async Task ConfirmEmailAsync(string to, string confirmLink, CancellationToken ct = default)
     {
         var body = P("Please confirm your email address to finish creating your CORE24 account.")
@@ -95,21 +121,60 @@ public class Notifier(
         await SendSafelyAsync(new EmailMessage(to, "You already have an account", Layout(body)), ct);
     }
 
+    public async Task PasswordResetAsync(string to, string resetLink, CancellationToken ct = default)
+    {
+        var body = P("Someone (probably you) asked to reset the password of your CORE24 account.")
+            + Button("Choose a new password", resetLink)
+            + P("The link works once and expires in 24 hours. If you didn't ask for this, ignore this email: your password stays the same.");
+        await SendSafelyAsync(new EmailMessage(to, "Reset your password", Layout(body)), ct);
+    }
+
+    /// <summary>
+    /// Sent after every password change. If it wasn't the owner, this email is how they find out
+    /// (and the "forgot password" link is how they take the account back).
+    /// </summary>
+    public async Task PasswordChangedAsync(string to, CancellationToken ct = default)
+    {
+        var body = P("The password of your CORE24 account was just changed.")
+            + P("If this wasn't you, reset your password now and reply to this email.")
+            + Button("Reset password", App.Link("/account/forgot-password"));
+        await SendSafelyAsync(new EmailMessage(to, "Your password was changed", Layout(body)), ct);
+    }
+
+    /// <summary>To the workshop: the landing page's "Book a check" form. Returns false if the email couldn't be sent.</summary>
+    public async Task<bool> ContactRequestAsync(ContactRequest request, CancellationToken ct = default)
+    {
+        var sb = new StringBuilder(P($"New booking request from {H(request.Name)}. Call them back to agree a time and a price."))
+            .Append("<table cellpadding=\"6\" style=\"border-collapse:collapse;font-size:14px\">");
+        Row("Name", request.Name);
+        Row("Phone", request.Phone);
+        Row("Vehicle", $"{request.Make} {request.Model}".Trim());
+        Row("What's happening", request.Issue);
+        sb.Append("</table>");
+
+        return await SendSafelyAsync(new EmailMessage(Email.WorkshopAddress, $"Booking request: {request.Name}, {request.Make}", Layout(sb.ToString())), ct);
+
+        void Row(string label, string? value) =>
+            sb.Append("<tr><td style=\"color:#667085\">").Append(H(label)).Append("</td><td>").Append(H(value)).Append("</td></tr>");
+    }
+
     private string OrderLink(Order order) => App.Link($"/o/{order.AccessToken}");
 
     /// <summary>
     /// A failed email must never undo an order or a payment, so errors are logged, not thrown.
     /// (A sturdier design is an "outbox": save the email in the database and retry in the background.)
     /// </summary>
-    private async Task SendSafelyAsync(EmailMessage message, CancellationToken ct)
+    private async Task<bool> SendSafelyAsync(EmailMessage message, CancellationToken ct)
     {
         try
         {
             await sender.SendAsync(message, ct);
+            return true;
         }
         catch (Exception ex)
         {
             log.LogError(ex, "Sending email \"{Subject}\" to {To} failed", message.Subject, message.To);
+            return false;
         }
     }
 

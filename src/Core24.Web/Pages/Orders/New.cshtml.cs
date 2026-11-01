@@ -30,18 +30,25 @@ public class NewModel(AppDbContext db, OrderService orders, UserManager<AppUser>
     public string Currency => appOptions.Value.Currency;
     public bool SignedIn => User.Identity?.IsAuthenticated == true;
 
-    public async Task OnGetAsync()
+    public async Task<IActionResult> OnGetAsync()
     {
+        // The workshop (admin) handles orders from the admin area, not the customer form.
+        if (User.IsInRole(Roles.Admin)) return RedirectToPage("/Admin/Index");
+
         await LoadModsAsync();
         Input.Make = Makes[0];
 
         // Logged-in customers don't retype their email.
         if (await users.GetUserAsync(User) is { } user)
             Input.Email = user.Email ?? "";
+        return Page();
     }
 
     public async Task<IActionResult> OnPostAsync(CancellationToken ct)
     {
+        // Same rule on submit: an admin can't place a customer order even by posting the form directly.
+        if (User.IsInRole(Roles.Admin)) return RedirectToPage("/Admin/Index");
+
         var user = await users.GetUserAsync(User);
         if (user is not null)
         {

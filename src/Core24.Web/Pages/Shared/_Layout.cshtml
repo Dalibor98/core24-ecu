@@ -21,7 +21,12 @@
             CORE24
         </a>
         <div class="top-right">
-            <nav><a asp-page="/Orders/New">Send a file</a></nav>
+            @* The admin runs the workshop; they don't place customer orders. Hide the link for them.
+               To experiment as a customer, use a separate (non-admin) account. *@
+            @if (!User.IsInRole(Core24.Web.Data.Roles.Admin))
+            {
+                <nav><a asp-page="/Orders/New">Send a file</a></nav>
+            }
             <partial name="_AccountMenu" />
         </div>
     </header>
@@ -34,5 +39,6 @@
         @RenderBody()
     </main>
     <script src="~/js/menu.js" asp-append-version="true"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
 </body>
 </html>

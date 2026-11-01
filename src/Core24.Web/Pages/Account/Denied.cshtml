@@ -1,8 +1,21 @@
 @page "/account/denied"
 @{
     ViewData["Title"] = "No access";
+    // An admin who logged in with the password only: the Admin policy also needs a two-factor login.
+    var adminWithoutTwoFactor = User.IsInRole(Roles.Admin) && !User.HasClaim("amr", "mfa");
 }
 <div class="head">
     <h1>No access</h1>
-    <p class="lede">Your account can't open that page.</p>
+    @if (adminWithoutTwoFactor)
+    {
+        <p class="lede">The workshop pages need a two-factor login: your password plus a code from an app on your phone.</p>
+        <p class="actions">
+            <a class="btn primary" asp-page="/Account/TwoFactor">Set up two-factor login</a>
+            <span class="muted">Already set up? Log out and log in again.</span>
+        </p>
+    }
+    else
+    {
+        <p class="lede">Your account can't open that page.</p>
+    }
 </div>

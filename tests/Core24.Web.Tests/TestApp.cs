@@ -11,7 +11,7 @@ namespace Core24.Web.Tests;
 /// Starts the real app in memory (no network, no browser) with its own temporary database,
 /// file storage and email folder, so tests never touch your development data.
 /// </summary>
-public class TestApp : WebApplicationFactory<Program>
+public class TestApp(params (string Key, string Value)[] settings) : WebApplicationFactory<Program>
 {
     public const string WebhookSecret = "whsec_test_secret";
 
@@ -19,6 +19,10 @@ public class TestApp : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        builder.UseSetting("Logs:Path", Path.Combine(Root, "logs", "test-.log"));
+        // Background jobs would run at random moments during a test. Tests call Maintenance directly.
+        builder.UseSetting("Maintenance:Enabled", "false");
+        builder.UseSetting("Alerts:To", "");
         builder.UseEnvironment("Development"); // dev gateway + pickup emails + dev admin from appsettings.Development.json
         builder.UseSetting("ConnectionStrings:Default", $"Data Source={Path.Combine(Root, "test.db")}");
         builder.UseSetting("Storage:RootPath", Path.Combine(Root, "files"));
@@ -31,6 +35,9 @@ public class TestApp : WebApplicationFactory<Program>
         builder.UseSetting("Email:PickupDirectory", Path.Combine(Root, "mail"));
         builder.UseSetting("App:PublicBaseUrl", "http://localhost");
         builder.UseSetting("Payments:StripeWebhookSecret", WebhookSecret);
+
+        // Per-test settings last, so they win: new TestApp(("Admin:RequireTwoFactor", "true")).
+        foreach (var (key, value) in settings) builder.UseSetting(key, value);
     }
 
     /// <summary>A browser-like client: keeps cookies, but lets the test see redirects instead of following them.</summary>

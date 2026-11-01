@@ -15,6 +15,9 @@ public interface IPaymentGateway
 {
     string Name { get; }
     Task<CheckoutSession> CreateCheckoutAsync(Order order, string successUrl, string cancelUrl, CancellationToken ct = default);
+
+    /// <summary>Sends the whole amount of a succeeded payment back. Returns the provider's refund id.</summary>
+    Task<string> RefundAsync(Payment payment, CancellationToken ct = default);
 }
 
 public class PaymentOptions
@@ -59,6 +62,25 @@ public class StripePaymentGateway(IOptions<PaymentOptions> options) : IPaymentGa
 
         return new CheckoutSession(session.Id, session.Url);
     }
+
+    public async Task<string> RefundAsync(Payment payment, CancellationToken ct = default)
+    {
+        var client = new StripeClient(options.Value.StripeSecretKey);
+
+        // A refund is made against the PaymentIntent (the money), not the Checkout Session (the page).
+        // We store it when the webhook arrives; for older payments, ask Stripe for it.
+        var paymentIntentId = payment.ProviderPaymentId
+            ?? (await new SessionService(client).GetAsync(payment.SessionId, cancellationToken: ct)).PaymentIntentId
+            ?? throw new InvalidOperationException($"Stripe has no payment for session {payment.SessionId}.");
+
+        var refund = await new RefundService(client).CreateAsync(
+            new RefundCreateOptions { PaymentIntent = paymentIntentId },
+            // Idempotency key: if this request is sent twice (a retry after a timeout, a double click),
+            // Stripe returns the first refund instead of refunding twice.
+            new RequestOptions { IdempotencyKey = $"core24-refund-{payment.Id}" },
+            ct);
+        return refund.Id;
+    }
 }
 
 /// <summary>
@@ -74,4 +96,7 @@ public class DevPaymentGateway : IPaymentGateway
         var id = "dev_" + Guid.NewGuid().ToString("N");
         return Task.FromResult(new CheckoutSession(id, $"/dev/checkout/{id}"));
     }
+
+    public Task<string> RefundAsync(Payment payment, CancellationToken ct = default) =>
+        Task.FromResult("dev_refund_" + Guid.NewGuid().ToString("N"));
 }

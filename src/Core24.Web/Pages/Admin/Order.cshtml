@@ -53,6 +53,11 @@
     </section>
 </div>
 
+@if (o.FilesDeletedAtUtc is not null)
+{
+    <div class="notice warn">The files of this order were deleted on @o.FilesDeletedAtUtc.Value.ToString("d MMM yyyy") (data retention). Only their names and checksums are kept.</div>
+}
+
 <section class="card">
     <h2>Customer's files</h2>
     <ul class="files">
@@ -132,7 +137,7 @@
         }
         @if (o.Status is OrderStatus.Submitted or OrderStatus.InProgress or OrderStatus.Ready)
         {
-            <form method="post" asp-page-handler="Cancel" asp-route-id="@o.Id" onsubmit="return confirm('Cancel this order?')">
+            <form method="post" asp-page-handler="Cancel" asp-route-id="@o.Id" data-confirm="Cancel this order?">
                 <button class="btn danger" type="submit">Cancel order</button>
             </form>
         }
@@ -140,18 +145,31 @@
         {
             <p>Paid @o.PaidAtUtc?.ToString("d MMM yyyy HH:mm") UTC · downloaded @o.DownloadCount time(s).</p>
         }
+        @if (o.PaymentRemindersSent > 0)
+        {
+            <p class="muted">Payment reminders sent: @o.PaymentRemindersSent.</p>
+        }
     </div>
     @if (o.Payments.Count > 0)
     {
         <table>
-            <thead><tr><th>Payment</th><th>Started</th><th>Status</th><th class="num">Amount</th></tr></thead>
+            <thead><tr><th>Payment</th><th>Started</th><th>Status</th><th class="num">Amount</th><th></th></tr></thead>
             @foreach (var p in o.Payments.OrderBy(p => p.CreatedAtUtc))
             {
                 <tr>
                     <td class="mono">@p.Provider · @p.SessionId</td>
                     <td>@p.CreatedAtUtc.ToString("d MMM HH:mm")</td>
-                    <td>@p.Status</td>
+                    <td>@p.Status @(p.RefundId is null ? "" : $"· {p.RefundId}")</td>
                     <td class="num">@Money.Format(p.AmountCents, p.Currency)</td>
+                    <td>
+                        @if (p.Status == Core24.Web.Features.Payments.PaymentStatus.Succeeded)
+                        {
+                            <form method="post" asp-page-handler="Refund" asp-route-id="@o.Id" asp-route-paymentId="@p.Id"
+                                  data-confirm="Refund @Money.Format(p.AmountCents, p.Currency) to the customer? This can't be undone.">
+                                <button class="btn small danger" type="submit">Refund</button>
+                            </form>
+                        }
+                    </td>
                 </tr>
             }
         </table>

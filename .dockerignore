@@ -1,0 +1,12 @@
+# Keep the build context small, and keep secrets and local data out of the image.
+**/bin/
+**/obj/
+**/App_Data/
+**/*.user
+.vs/
+.git/
+docs/
+tests/
+Utility/
+DevNotes.md
+.env

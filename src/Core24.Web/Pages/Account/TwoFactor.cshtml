@@ -1,0 +1,73 @@
+@page "/account/two-factor"
+@model Core24.Web.Pages.Account.TwoFactorModel
+@{
+    ViewData["Title"] = "Two-factor login";
+}
+<div class="head">
+    <p class="eyebrow"><a asp-page="/Account/Index">Account</a> / Two-factor login</p>
+    <h1>Two-factor login</h1>
+    <p class="lede">After your password, you also type a 6-digit code from an app on your phone. A stolen password alone is then not enough to log in.</p>
+</div>
+
+@if (Model.Flash is not null)
+{
+    <div class="notice ok">@Model.Flash</div>
+}
+
+@if (Model.NewRecoveryCodes is not null)
+{
+    <section class="card">
+        <h2>Your recovery codes</h2>
+        <p>If you lose your phone, each of these codes lets you log in <b>once</b> instead of the app code. <b>Save them now</b> (print them, or store them in a password manager). They are not shown again.</p>
+        <ul class="codes mono">
+            @foreach (var code in Model.NewRecoveryCodes.Split(' '))
+            {
+                <li>@code</li>
+            }
+        </ul>
+    </section>
+}
+
+@if (Model.Enabled)
+{
+    <section class="card">
+        <h2>On</h2>
+        <p>Two-factor login is on. Recovery codes left: <b>@Model.RecoveryCodesLeft</b>.</p>
+        <form method="post" asp-page-handler="RecoveryCodes">
+            <button class="btn" type="submit">Make new recovery codes</button>
+        </form>
+    </section>
+
+    <section class="card">
+        <h2>Turn off</h2>
+        <form method="post" asp-page-handler="Disable" class="stack">
+            <div asp-validation-summary="All"></div>
+            <div class="field">
+                <label asp-for="Input.Code"></label>
+                <input asp-for="Input.Code" autocomplete="one-time-code" inputmode="numeric">
+            </div>
+            <div class="actions"><button class="btn danger" type="submit">Turn off two-factor login</button></div>
+        </form>
+    </section>
+}
+else
+{
+    <section class="card">
+        <h2>1. Add CORE24 to your authenticator app</h2>
+        <p>Open Google Authenticator, Microsoft Authenticator or a password manager, choose "add account", and scan this code:</p>
+        <img class="qr" src="@Model.QrCodeDataUrl" alt="QR code for your authenticator app" width="200" height="200">
+        <p class="hint">Can't scan? Type this key instead: <span class="mono">@Model.SharedKey</span></p>
+    </section>
+
+    <section class="card">
+        <h2>2. Type the code the app shows</h2>
+        <form method="post" asp-page-handler="Enable" class="stack">
+            <div asp-validation-summary="All"></div>
+            <div class="field">
+                <label asp-for="Input.Code"></label>
+                <input asp-for="Input.Code" autocomplete="one-time-code" inputmode="numeric">
+            </div>
+            <div class="actions"><button class="btn primary" type="submit">Turn on</button></div>
+        </form>
+    </section>
+}

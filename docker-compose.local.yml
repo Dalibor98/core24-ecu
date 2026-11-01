@@ -1,0 +1,38 @@
+# Rehearsal on your own PC: the real Docker setup (image, volume, Caddy, HTTPS), but with the
+# fake checkout and a local mail catcher, so it needs no .env and no secrets.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
+#
+# Open https://localhost. The browser warns about the certificate (Caddy made it itself, it's not
+# from Let's Encrypt): click "Advanced" -> "Continue". Admin: admin@core24.local / dev-admin-password.
+# Every email (confirm, reset, orders) appears in Mailpit: open http://localhost:8025 and click the
+# links there. Stop with Ctrl+C; "down -v" also deletes the data.
+
+name: core24-local   # separate containers and volumes from anything else
+
+services:
+  app:
+    env_file: !reset []            # no .env needed here
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development   # allows the fake checkout
+      App__PublicBaseUrl: https://localhost
+      AllowedHosts: localhost
+      # Send real SMTP to the Mailpit catcher instead of writing .eml files. The sender uses
+      # StartTlsWhenAvailable and no username, so plain SMTP on 1025 just works (Email.cs).
+      Email__Mode: Smtp
+      Email__SmtpHost: mailpit
+      Email__SmtpPort: "1025"
+    depends_on:
+      - mailpit
+
+  caddy:
+    environment:
+      DOMAIN: localhost            # Caddy gives localhost its own certificate
+
+  # Development mail catcher: accepts every email and shows it in a web inbox. Nothing leaves your PC.
+  mailpit:
+    image: axllent/mailpit:v1.31
+    restart: unless-stopped
+    ports:
+      - "8025:8025"                # web inbox: http://localhost:8025
+    # SMTP is on 1025 inside the Docker network; the app reaches it as "mailpit:1025".

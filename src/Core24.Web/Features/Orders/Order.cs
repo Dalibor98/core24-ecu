@@ -10,6 +10,7 @@ public enum OrderStatus
     Ready,       // modified file uploaded, waiting for payment
     Paid,        // payment confirmed, download unlocked
     Cancelled,
+    Refunded,    // was paid, the money went back to the customer; download locked again
 }
 
 public class Order
@@ -46,6 +47,12 @@ public class Order
     public DateTime? ReadyAtUtc { get; set; }
     public DateTime? PaidAtUtc { get; set; }
     public int DownloadCount { get; set; }
+
+    /// <summary>"You haven't paid yet" emails sent so far (0, 1 or 2). See Maintenance.</summary>
+    public int PaymentRemindersSent { get; set; }
+
+    /// <summary>Set when the retention job deleted this order's files from disk. The rows stay, as a record.</summary>
+    public DateTime? FilesDeletedAtUtc { get; set; }
 
     public List<OrderItem> Items { get; set; } = [];
     public List<OrderFile> Files { get; set; } = [];

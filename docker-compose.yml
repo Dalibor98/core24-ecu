@@ -1,0 +1,34 @@
+# Production on one Linux server (Hetzner, Hostinger VPS...):
+#   1. copy this folder to the server (git clone), create .env from .env.example and fill it in
+#   2. point the domain's DNS (A record) at the server, then:  docker compose up -d --build
+# Caddy gets a free HTTPS certificate from Let's Encrypt by itself.
+
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # The app is reachable only through Caddy (no "ports:" below), so it may trust Caddy's X-Forwarded-* headers.
+      ReverseProxy__Enabled: "true"
+    volumes:
+      - app-data:/app/App_Data   # database, uploaded files, keys, logs: BACK THIS UP
+    # No "ports:": the app is not reachable from the internet directly, only through Caddy.
+
+  caddy:
+    image: caddy:2.10
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data         # certificates
+    depends_on:
+      - app
+
+volumes:
+  app-data:
+  caddy-data:

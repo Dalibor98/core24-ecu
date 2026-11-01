@@ -236,14 +236,16 @@ public class OrderService(
                 errors.Add(new(field, $"{file.FileName} is empty."));
             if (file.Length > Uploads.MaxFileBytes)
                 errors.Add(new(field, $"{file.FileName} is larger than {Uploads.MaxFileBytes / 1024 / 1024} MB."));
+            // The extension is just part of the name: check what the bytes really are.
+            if (file.Length > 0 && FileSignature.DetectForbidden(file) is { } realType)
+                errors.Add(new(field, $"{file.FileName} is {realType}, not an ECU file."));
         }
         return errors;
     }
 
     private async Task<OrderFile> StoreAsync(IFormFile upload, Guid orderId, OrderFileKind kind, DateTime now, CancellationToken ct)
     {
-        // Browsers send only the name, but old ones sent "C:\Users\...\file.bin". Keep just the name.
-        var fileName = Path.GetFileName(upload.FileName.Replace('\\', '/'));
+        var fileName = CleanFileName(upload.FileName);
 
         await using var stream = upload.OpenReadStream();
         var stored = await store.SaveAsync(stream, $"orders/{orderId:N}/{kind.ToString().ToLowerInvariant()}", ct);
@@ -273,6 +275,21 @@ public class OrderService(
             try { store.Delete(f.StorageKey); }
             catch (Exception ex) { log.LogWarning(ex, "Could not delete {Key}", f.StorageKey); }
         }
+    }
+
+    /// <summary>
+    /// The uploader chooses the name, so treat it as hostile text: we show it in pages and emails
+    /// and send it back in download headers.
+    /// </summary>
+    public static string CleanFileName(string raw)
+    {
+        // Browsers send only the name, but old ones sent "C:\Users\...\file.bin". Keep just the name.
+        var name = Path.GetFileName(raw.Replace('\\', '/'));
+        // Control characters (new lines, NUL...) have no place in a file name and can break headers and logs.
+        name = new string(name.Where(c => !char.IsControl(c)).ToArray()).Trim();
+        // The database column holds 255 characters. Keep the end: it holds the extension.
+        if (name.Length > 200) name = name[^200..];
+        return name.Length == 0 ? "file.bin" : name;
     }
 
     /// <summary>32 random bytes = 256 bits: impossible to guess. Base64Url keeps it safe inside a URL.</summary>

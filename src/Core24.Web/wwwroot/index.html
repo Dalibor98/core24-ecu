@@ -421,9 +421,11 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--scan);bo
           </div>
           <div class="field"><label for="f-model">Model and year</label><input id="f-model" name="model" placeholder="e.g. FH 500, 2019"></div>
         </div>
-        <div class="field"><label for="f-issue">What's happening?</label><textarea id="f-issue" name="issue" placeholder="e.g. Engine light on, loses power on hills"></textarea></div>
+        <div class="field"><label for="f-issue">What's happening?</label><textarea id="f-issue" name="issue" maxlength="2000" placeholder="e.g. Engine light on, loses power on hills"></textarea></div>
+        <!-- Honeypot: hidden from people, but spam bots fill it in. The server ignores requests that have it. -->
+        <div style="position:absolute;left:-10000px" aria-hidden="true"><label for="f-website">Website</label><input id="f-website" name="website" tabindex="-1" autocomplete="off"></div>
         <button class="btn primary" type="submit">Request a slot</button>
-        <p class="note form-msg" id="form-msg" role="status" hidden>This is a demo form and nothing was sent. Connect it to your email or booking tool before launch.</p>
+        <p class="note form-msg" id="form-msg" role="status" hidden></p>
       </form>
     </div>
   </section>
@@ -1420,9 +1422,34 @@ addEventListener('scroll', () => {
   hint.style.opacity = scrollY > 80 ? '0' : '1';
 }, { passive: true });
 
-$('book-form').addEventListener('submit', (e) => {
+// "Book a check": sent as JSON to /api/contact, which emails the workshop.
+$('book-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  $('form-msg').hidden = false;
+  const form = e.currentTarget, msg = $('form-msg'), button = form.querySelector('button[type=submit]');
+  const show = (text) => { msg.textContent = text; msg.hidden = false; };
+  if (!form.reportValidity()) return; // the browser shows "please fill in this field"
+
+  const data = Object.fromEntries(new FormData(form));
+  button.disabled = true;
+  try {
+    const r = await fetch('/api/contact', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (r.ok) {
+      form.reset();
+      show('Thank you. We got your request and will call you back to agree a time.');
+    } else if (r.status === 429) {
+      show('Too many requests from your network. Please wait a few minutes, or call us.');
+    } else {
+      show('Sorry, that did not work. Please check the fields, or call us.');
+    }
+  } catch {
+    show('No connection. Please try again, or call us.');
+  } finally {
+    button.disabled = false;
+  }
 });
 
 // "+" marks fade toward the left and right screen edges, matching the backdrop grid

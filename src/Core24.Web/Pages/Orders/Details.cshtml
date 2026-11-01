@@ -48,6 +48,10 @@
         </section>
         break;
 
+    case OrderStatus.Paid when o.FilesDeletedAtUtc is not null:
+        <div class="notice">This order is complete. Its files were deleted on @o.FilesDeletedAtUtc.Value.ToString("d MMM yyyy"), as described in our privacy policy. Reply to any of our emails if you need help.</div>
+        break;
+
     case OrderStatus.Paid:
         <section class="card">
             <h2>Download</h2>
@@ -67,6 +71,10 @@
 
     case OrderStatus.Cancelled:
         <div class="notice warn">This order was cancelled. Reply to any of our emails if you have questions.</div>
+        break;
+
+    case OrderStatus.Refunded:
+        <div class="notice warn">This order was refunded. Banks usually show the money on your card within 5 to 10 days.</div>
         break;
 }
 

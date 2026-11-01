@@ -80,6 +80,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--scan);bo
 .status.Ready{color:var(--heat);border-color:rgba(255,138,31,.45)}
 .status.Paid{color:var(--ok);border-color:rgba(69,224,154,.45)}
 .status.Cancelled{color:var(--dim)}
+.status.Refunded{color:var(--bad);border-color:rgba(255,90,79,.4)}
 
 dl.facts{display:grid;grid-template-columns:max-content 1fr;gap:8px 20px;margin:0}
 dl.facts dt{font:500 11px/1.9 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--steel)}
@@ -108,3 +109,8 @@ tr.total td{border-bottom:0;font-weight:600}
 .dev-banner{padding:10px var(--gutter);background:rgba(255,138,31,.12);border-bottom:1px solid rgba(255,138,31,.4);color:var(--heat);font:500 12px/1.5 var(--mono)}
 /* Phones: "Send a file" is also in the account menu, so drop the separate link to keep the header on one line. */
 @media (max-width:560px){.top nav{display:none}}
+
+/* Two-factor setup: QR code needs a light background and a quiet zone to scan reliably */
+.qr{background:#fff;border-radius:8px;padding:8px;width:200px;height:200px}
+.codes{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(9rem,1fr));gap:8px}
+.codes li{padding:8px 10px;border:1px solid var(--line);border-radius:6px}

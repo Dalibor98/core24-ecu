@@ -155,8 +155,14 @@ namespace Core24.Web.Data.Migrations
                     b.Property<int>("DownloadCount")
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime?>("FilesDeletedAtUtc")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime?>("PaidAtUtc")
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("PaymentRemindersSent")
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime?>("ReadyAtUtc")
                         .HasColumnType("TEXT");
@@ -320,6 +326,17 @@ namespace Core24.Web.Data.Migrations
                     b.Property<string>("Provider")
                         .IsRequired()
                         .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProviderPaymentId")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RefundId")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("RefundedAtUtc")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SessionId")

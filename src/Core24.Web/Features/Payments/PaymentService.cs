@@ -64,7 +64,7 @@ public class PaymentService(
     /// more than once, sometimes at the same moment, so this must be safe to run twice:
     /// the conditional UPDATE lets exactly one call through.
     /// </summary>
-    public async Task<CompleteResult> CompleteAsync(string sessionId, long amountPaidCents, string currency, CancellationToken ct = default)
+    public async Task<CompleteResult> CompleteAsync(string sessionId, long amountPaidCents, string currency, string? providerPaymentId = null, CancellationToken ct = default)
     {
         var payment = await db.Payments.AsNoTracking().SingleOrDefaultAsync(p => p.SessionId == sessionId, ct);
         if (payment is null)
@@ -87,7 +87,8 @@ public class PaymentService(
             .Where(p => p.Id == payment.Id && p.Status == PaymentStatus.Pending)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(p => p.Status, PaymentStatus.Succeeded)
-                .SetProperty(p => p.CompletedAtUtc, now), ct);
+                .SetProperty(p => p.CompletedAtUtc, now)
+                .SetProperty(p => p.ProviderPaymentId, providerPaymentId), ct);
         if (claimed == 0) return CompleteResult.AlreadyProcessed;
 
         var paid = await db.Orders
@@ -106,5 +107,44 @@ public class PaymentService(
         log.LogInformation("Order {Reference} paid", order.Reference);
         await notifier.OrderPaidAsync(order, ct);
         return CompleteResult.Completed;
+    }
+
+    /// <summary>
+    /// The workshop gives the money back (whole amount). A paid order becomes Refunded and its
+    /// download locks again. Also used when money arrived for an order that was already cancelled.
+    /// Returns an error message, or null on success.
+    /// </summary>
+    public async Task<string?> RefundAsync(Guid orderId, int paymentId, CancellationToken ct = default)
+    {
+        var payment = await db.Payments.AsNoTracking().SingleOrDefaultAsync(p => p.Id == paymentId && p.OrderId == orderId, ct);
+        if (payment is not { Status: PaymentStatus.Succeeded }) return "Only a successful payment can be refunded.";
+        if (payment.Provider != gateway.Name) return $"This payment was made through '{payment.Provider}', but the app now uses '{gateway.Name}'. Refund it in that provider's dashboard.";
+
+        // Money moves first. If this throws, nothing in our database changed and the admin can retry;
+        // the idempotency key makes sure a retry can't refund twice.
+        string refundId;
+        try
+        {
+            refundId = await gateway.RefundAsync(payment, ct);
+        }
+        catch (Exception ex)
+        {
+            log.LogError(ex, "Refund of payment {PaymentId} for order {OrderId} failed", paymentId, orderId);
+            return "The payment provider refused the refund: " + ex.Message;
+        }
+
+        var now = time.GetUtcNow().UtcDateTime;
+        await db.Payments.Where(p => p.Id == paymentId && p.Status == PaymentStatus.Succeeded)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(p => p.Status, PaymentStatus.Refunded)
+                .SetProperty(p => p.RefundId, refundId)
+                .SetProperty(p => p.RefundedAtUtc, now), ct);
+        await db.Orders.Where(o => o.Id == orderId && o.Status == OrderStatus.Paid)
+            .ExecuteUpdateAsync(s => s.SetProperty(o => o.Status, OrderStatus.Refunded), ct);
+
+        var order = await db.Orders.AsNoTracking().SingleAsync(o => o.Id == orderId, ct);
+        log.LogInformation("Order {Reference}: payment {PaymentId} refunded ({RefundId})", order.Reference, paymentId, refundId);
+        await notifier.OrderRefundedAsync(order, payment.AmountCents, payment.Currency, ct);
+        return null;
     }
 }

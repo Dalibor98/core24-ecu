@@ -6,6 +6,10 @@
 <div class="head">
     <p class="eyebrow">Account · @User.Identity?.Name</p>
     <h1>My orders</h1>
+    <div class="actions">
+        <a class="btn small" asp-page="/Account/Password">Change password</a>
+        <a class="btn small" asp-page="/Account/TwoFactor">Two-factor login</a>
+    </div>
 </div>
 
 @if (Model.Orders.Count == 0)

@@ -55,20 +55,27 @@ public static class DownloadEndpoints
             if (file is not { Kind: OrderFileKind.Modified, Order.Status: OrderStatus.Paid })
                 return Results.NotFound();
 
+            // The retention job may have deleted the bytes (the database row stays as a record).
+            var path = store.GetFullPath(file.StorageKey);
+            if (!File.Exists(path))
+                return Results.Problem("This file was deleted after the retention period.", statusCode: StatusCodes.Status410Gone);
+
             await db.Orders.Where(o => o.Id == file.OrderId)
                 .ExecuteUpdateAsync(s => s.SetProperty(o => o.DownloadCount, o => o.DownloadCount + 1), ct);
 
             // Streams from disk (no loading into memory); range support lets broken downloads resume.
-            return Results.File(store.GetFullPath(file.StorageKey), "application/octet-stream", file.FileName, enableRangeProcessing: true);
+            return Results.File(path, "application/octet-stream", file.FileName, enableRangeProcessing: true);
         });
 
         // Workshop: any file of any order, for logged-in admins only.
         app.MapGet("/admin/files/{id:int}", async (int id, AppDbContext db, IFileStore store, CancellationToken ct) =>
         {
             var file = await db.OrderFiles.AsNoTracking().SingleOrDefaultAsync(f => f.Id == id, ct);
-            return file is null
-                ? Results.NotFound()
-                : Results.File(store.GetFullPath(file.StorageKey), "application/octet-stream", file.FileName, enableRangeProcessing: true);
+            if (file is null) return Results.NotFound();
+            var path = store.GetFullPath(file.StorageKey);
+            return File.Exists(path)
+                ? Results.File(path, "application/octet-stream", file.FileName, enableRangeProcessing: true)
+                : Results.Problem("This file was deleted after the retention period.", statusCode: StatusCodes.Status410Gone);
         }).RequireAuthorization(Roles.Admin);
     }
 }

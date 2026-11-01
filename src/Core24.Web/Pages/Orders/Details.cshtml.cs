@@ -29,7 +29,7 @@ public class DetailsModel(AppDbContext db, PaymentService payments, DownloadLink
         JustCreated = @new;
         ReturnedFromPayment = paid && Order.Status == OrderStatus.Ready; // back from Stripe, webhook not here yet
 
-        if (Order.Status == OrderStatus.Paid)
+        if (Order is { Status: OrderStatus.Paid, FilesDeletedAtUtc: null })
             foreach (var file in Order.ModifiedFiles)
                 DownloadUrls[file.Id] = links.CreateUrl(file.Id);
 

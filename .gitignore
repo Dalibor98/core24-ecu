@@ -10,3 +10,9 @@ App_Data/
 # The client's sample ECU dumps (real VINs): keep out of source control
 Utility/*.bin
 docs/
+
+# Production secrets for docker compose (template: .env.example)
+.env
+
+# Emails from the local Docker rehearsal (docker-compose.local.yml)
+docker-mail/

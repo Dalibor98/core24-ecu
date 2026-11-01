@@ -47,6 +47,10 @@ public class LoginModel(SignInManager<AppUser> signIn, UserManager<AppUser> user
             return LocalRedirect(Url.IsLocalUrl(ReturnUrl) ? ReturnUrl! : "/account");
         }
 
+        // Right password, and the account has two-factor login on: not logged in yet, ask for the code.
+        if (result.RequiresTwoFactor)
+            return RedirectToPage("/Account/LoginTwoFactor", new { ReturnUrl, Input.RememberMe });
+
         if (result.IsLockedOut)
             ModelState.AddModelError("", "Too many failed attempts. Try again in a few minutes.");
         else if (result.IsNotAllowed)

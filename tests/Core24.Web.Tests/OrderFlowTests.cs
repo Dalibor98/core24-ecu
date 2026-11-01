@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using Core24.Web.Data;
@@ -8,6 +7,7 @@ using Core24.Web.Features.Orders;
 using Core24.Web.Features.Payments;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using static Core24.Web.Tests.TestFlows;
 
 namespace Core24.Web.Tests;
 
@@ -53,7 +53,7 @@ public class OrderFlowTests : IDisposable
         using (var upload = new MultipartFormDataContent())
         {
             upload.Add(new StringContent(token), "__RequestVerificationToken");
-            upload.Add(File(modified, "modified.bin"), "modifiedFiles", "modified.bin");
+            upload.Add(FilePart(modified, "modified.bin"), "modifiedFiles", "modified.bin");
             AssertRedirect(await admin.PostAsync($"{adminPage}?handler=Upload", upload));
         }
         AssertRedirect(await admin.PostFormAsync($"{adminPage}?handler=Ready", token));
@@ -227,54 +227,9 @@ public class OrderFlowTests : IDisposable
         Assert.Single(app.Emails(), e => e.Subject!.StartsWith("Payment received"));
     }
 
-    // ---------- helpers ----------
+    // ---------- helpers (the shared ones are in TestFlows.cs) ----------
 
-    private async Task<string> SubmitOrderAsync(HttpClient browser, string email, string fileName, byte[] bytes)
-    {
-        var token = await browser.GetFormTokenAsync("/order/new");
-        using var form = OrderForm(token, email, fileName, bytes);
-        var location = AssertRedirect(await browser.PostAsync("/order/new", form));
-        Assert.StartsWith("/o/", location);
-        return location.Split('?')[0];
-    }
-
-    private static MultipartFormDataContent OrderForm(string token, string email, string fileName, byte[] bytes)
-    {
-        var form = new MultipartFormDataContent
-        {
-            { new StringContent(token), "__RequestVerificationToken" },
-            { new StringContent("Test Driver"), "Input.Name" },
-            { new StringContent(email), "Input.Email" },
-            { new StringContent("Mercedes-Benz"), "Input.Make" },
-            { new StringContent("Actros 1845"), "Input.Model" },
-            { new StringContent("1"), "Input.ModIds" }, // seeded "Stage 1 performance remap"
-        };
-        form.Add(File(bytes, fileName), "Files", fileName);
-        return form;
-    }
-
-    private static async Task<string> RegisterAsync(HttpClient browser, string email, string password)
-    {
-        var token = await browser.GetFormTokenAsync("/account/register");
-        var response = await browser.PostFormAsync("/account/register", token,
-            ("Input.Email", email), ("Input.Password", password), ("Input.ConfirmPassword", password));
-        return await response.Content.ReadAsStringAsync();
-    }
-
-    private static async Task<string> LoginAsync(HttpClient browser, string email, string password, bool expectSuccess = true)
-    {
-        var token = await browser.GetFormTokenAsync("/account/login");
-        var response = await browser.PostFormAsync("/account/login", token, ("Input.Email", email), ("Input.Password", password));
-        if (expectSuccess) AssertRedirect(response);
-        return await response.Content.ReadAsStringAsync();
-    }
-
-    private async Task<Order> LoadOrderAsync()
-    {
-        using var scope = app.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        return await db.Orders.AsNoTracking().Include(o => o.Files).OrderByDescending(o => o.CreatedAtUtc).FirstAsync();
-    }
+    private Task<Order> LoadOrderAsync() => app.LatestOrderAsync();
 
     /// <summary>Signs like Stripe does: HMAC-SHA256 over "timestamp.body" with the webhook secret.</summary>
     private async Task<HttpResponseMessage> PostWebhookAsync(string json, string secret)
@@ -285,20 +240,4 @@ public class OrderFlowTests : IDisposable
         request.Headers.Add("Stripe-Signature", $"t={timestamp},v1={signature}");
         return await app.Browser().SendAsync(request);
     }
-
-    private static string AssertRedirect(HttpResponseMessage response)
-    {
-        Assert.True(response.StatusCode == HttpStatusCode.Redirect, $"Expected a redirect, got {(int)response.StatusCode}");
-        return response.Headers.Location!.OriginalString;
-    }
-
-    private static ByteArrayContent File(byte[] bytes, string name)
-    {
-        var content = new ByteArrayContent(bytes);
-        content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-        return content;
-    }
-
-    private static byte[] RandomBytes(int length) => RandomNumberGenerator.GetBytes(length);
-    private static string Md5(byte[] bytes) => Convert.ToHexString(MD5.HashData(bytes));
 }

@@ -87,6 +87,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
             e.Property(p => p.Provider).HasMaxLength(20);
             e.Property(p => p.SessionId).HasMaxLength(255);
             e.Property(p => p.CheckoutUrl).HasMaxLength(2000);
+            e.Property(p => p.ProviderPaymentId).HasMaxLength(255);
+            e.Property(p => p.RefundId).HasMaxLength(255);
             e.Property(p => p.Currency).HasMaxLength(3);
         });
     }

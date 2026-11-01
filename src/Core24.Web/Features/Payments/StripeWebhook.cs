@@ -41,7 +41,7 @@ public static class StripeWebhook
         if (stripeEvent.Type is EventTypes.CheckoutSessionCompleted or EventTypes.CheckoutSessionAsyncPaymentSucceeded
             && stripeEvent.Data.Object is Session { PaymentStatus: "paid" } session)
         {
-            var result = await payments.CompleteAsync(session.Id, session.AmountTotal ?? 0, session.Currency ?? "", ct);
+            var result = await payments.CompleteAsync(session.Id, session.AmountTotal ?? 0, session.Currency ?? "", session.PaymentIntentId, ct);
             log.LogInformation("Stripe event {EventId} ({Type}): {Result}", stripeEvent.Id, stripeEvent.Type, result);
         }
 

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Core24.Web.Pages.Account;
 
-/// <summary>"My orders". Requires login (AuthorizePage in Program.cs).</summary>
+/// <summary>"My orders", with links to the account settings. Requires login (AuthorizePage in Program.cs).</summary>
 public class IndexModel(AppDbContext db, UserManager<AppUser> users) : PageModel
 {
     public List<Order> Orders { get; private set; } = [];

@@ -1,12 +1,12 @@
 @model OrderStatus
 @{
-    // The happy path, in order. Cancelled orders show only a badge.
+    // The happy path, in order. Cancelled and refunded orders show only a badge.
     var steps = new[] { (OrderStatus.Submitted, "Received"), (OrderStatus.InProgress, "In progress"), (OrderStatus.Ready, "Ready to pay"), (OrderStatus.Paid, "Paid") };
     var current = Array.FindIndex(steps, s => s.Item1 == Model);
 }
-@if (Model == OrderStatus.Cancelled)
+@if (Model is OrderStatus.Cancelled or OrderStatus.Refunded)
 {
-    <span class="status Cancelled">Cancelled</span>
+    <span class="status @Model">@Model</span>
 }
 else
 {

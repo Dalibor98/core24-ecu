@@ -1,0 +1,15 @@
+# Caddy: HTTPS in front of the app. {$DOMAIN} comes from .env (e.g. core24.eu).
+{$DOMAIN} {
+	# Uploads can be up to ~110 MB per request (UploadOptions.MaxRequestBytes).
+	request_body {
+		max_size 120MB
+	}
+
+	# HSTS is sent by the app itself; Caddy adds X-Forwarded-For and X-Forwarded-Proto automatically.
+	reverse_proxy app:8080
+}
+
+# www.example.com → example.com
+www.{$DOMAIN} {
+	redir https://{$DOMAIN}{uri} permanent
+}
