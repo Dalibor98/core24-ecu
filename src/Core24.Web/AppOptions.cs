@@ -36,4 +36,17 @@ public static class Money
 
     /// <summary>"290.50" (as typed by the admin) → 29050. Rounds to whole cents.</summary>
     public static long ToCents(decimal amount) => (long)Math.Round(amount * 100m, MidpointRounding.AwayFromZero);
+
+    /// <summary>
+    /// Reads a price typed by a person or found in a file: "320", "320.50" or "320,50". Always parsed with a dot,
+    /// never with the server's language settings (where "320.50" can mean 32050).
+    /// </summary>
+    public static bool TryParseCents(string? text, out long cents)
+    {
+        cents = 0;
+        if (string.IsNullOrWhiteSpace(text) || !System.Text.RegularExpressions.Regex.IsMatch(text.Trim(), @"^\d{1,6}([.,]\d{1,2})?$"))
+            return false;
+        cents = ToCents(decimal.Parse(text.Trim().Replace(',', '.'), CultureInfo.InvariantCulture));
+        return true;
+    }
 }

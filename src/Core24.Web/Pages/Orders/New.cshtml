@@ -6,15 +6,78 @@
 <div class="head">
     <p class="eyebrow">Remote file service</p>
     <h1>Send us your ECU file</h1>
-    <p class="lede">Upload the file you read from the truck and choose what you need. We email you when the modified file is ready; you pay, then download it.</p>
+    <p class="lede">Choose what you need, pick your vehicle and upload the file you read from it. We email you when your file is ready; you pay, then download it.</p>
 </div>
 
-@* enctype multipart/form-data is required for file uploads; without it the browser sends only the file NAME. *@
-<form method="post" enctype="multipart/form-data" class="stack">
+@* enctype multipart/form-data is required for file uploads; without it the browser sends only the file NAME.
+   data-order-form: site.js shows only the parts that belong to the chosen kind of order. *@
+<form method="post" enctype="multipart/form-data" class="stack" data-order-form>
     <div asp-validation-summary="All"></div>
 
     <section class="card">
-        <h2>1. Your file</h2>
+        <h2>1. What do you need?</h2>
+        <div class="mods">
+            <label class="mod">
+                <input type="radio" asp-for="Input.Type" value="@OrderType.OriginalFile">
+                <span><b>Original file</b><span class="hint">The factory file for your engine computer, to put the vehicle back to standard.</span></span>
+                <span class="price">Fixed price</span>
+            </label>
+            <label class="mod">
+                <input type="radio" asp-for="Input.Type" value="@OrderType.SpecialRequest">
+                <span><b>Special request</b><span class="hint">Anything else, or work that needs more than one computer (for example ACM or CPC). We email you the price before we start.</span></span>
+                <span class="price">Price by email</span>
+            </label>
+        </div>
+    </section>
+
+    <section class="card">
+        <h2>2. Your vehicle</h2>
+
+        @* The vehicle is CLICKED from the price list, never typed: no spelling mistakes, and the price is known.
+           Without JavaScript this is one long list; site.js turns it into four short ones. *@
+        <div class="stack" data-picker>
+            <div class="grid2" data-picker-steps hidden></div>
+            <div class="field">
+                <label asp-for="Input.PriceListEntryId">Vehicle and computer</label>
+                <select asp-for="Input.PriceListEntryId" data-picker-source>
+                    <option value="">Choose…</option>
+                    @foreach (var brand in Model.PriceList.GroupBy(p => p.Brand))
+                    {
+                        <optgroup label="@brand.Key">
+                            @foreach (var p in brand)
+                            {
+                                <option value="@p.Id" data-brand="@p.Brand" data-model="@p.Model" data-engine="@p.Engine" data-ecu="@p.Ecu"
+                                        data-price="@Money.Format(p.PriceCents, Model.Currency)">@p.Model · @p.Engine · @p.Ecu (@Money.Format(p.PriceCents, Model.Currency))</option>
+                            }
+                        </optgroup>
+                    }
+                </select>
+            </div>
+            <p class="hint">The computer is written on its label and shown by your reading tool. Not sure, or more than one fits? Choose "Special request" and we'll check it for you.</p>
+            <div data-show-for="@OrderType.OriginalFile">
+                <p class="notice" data-picker-price hidden></p>
+            </div>
+        </div>
+        <span asp-validation-for="Input.PriceListEntryId" class="field-error"></span>
+
+        <div class="stack" data-show-for="@OrderType.SpecialRequest">
+            <label class="check"><input asp-for="Input.VehicleNotListed" data-not-listed-toggle> My vehicle isn't in the list</label>
+            <div class="grid2" data-typed-vehicle>
+                <div class="field">
+                    <label asp-for="Input.Make">Make</label>
+                    <input asp-for="Input.Make" placeholder="e.g. Tatra">
+                    <span asp-validation-for="Input.Make" class="field-error"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="Input.Model"></label>
+                    <input asp-for="Input.Model" placeholder="e.g. Phoenix 12.9 L, 2019">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="card">
+        <h2>3. Your file</h2>
         <div class="field">
             <label asp-for="Files">ECU file(s)</label>
             <input asp-for="Files" type="file" multiple accept="@string.Join(",", Model.Uploads.AllowedExtensions)" required>
@@ -22,36 +85,20 @@
                 Up to @Model.Uploads.MaxFiles files, @(Model.Uploads.MaxFileBytes / 1024 / 1024) MB each. Keep the file name your tool gave it
                 (e.g. <span class="mono">WDB963…_MCM2_PFLASH+DFLASH_…_OBD.bin</span>): we read the VIN and ECU type from it and check the file arrived undamaged.
             </p>
+            <p class="hint" data-show-for="@OrderType.SpecialRequest">
+                Special request: upload the file of <b>every computer</b> the job needs, each read separately (for example the engine computer and the ACM, or the CPC).
+            </p>
+        </div>
+        <div class="field">
+            <label asp-for="Input.Message">Message</label>
+            <textarea asp-for="Input.Message" placeholder="Special request: describe what you need. Original file: anything we should know (optional)."></textarea>
+            <span asp-validation-for="Input.Message" class="field-error"></span>
         </div>
     </section>
 
     <section class="card">
-        <h2>2. What should we do?</h2>
-        <div class="mods">
-            @foreach (var mod in Model.Mods)
-            {
-                <label class="mod">
-                    <input type="checkbox" name="Input.ModIds" value="@mod.Id" checked="@Model.Input.ModIds.Contains(mod.Id)">
-                    <span><b>@mod.Name</b><span class="hint">@mod.Description</span></span>
-                    <span class="price">@Money.Format(mod.PriceCents, Model.Currency)</span>
-                </label>
-            }
-        </div>
-        <span asp-validation-for="Input.ModIds" class="field-error"></span>
-        <p class="hint">You pay only when the modified file is ready.</p>
-    </section>
-
-    <section class="card">
-        <h2>3. Vehicle and contact</h2>
+        <h2>4. Contact</h2>
         <div class="grid2">
-            <div class="field">
-                <label asp-for="Input.Make">Make</label>
-                <select asp-for="Input.Make" asp-items="@(new SelectList(NewModel.Makes))"></select>
-            </div>
-            <div class="field">
-                <label asp-for="Input.Model"></label>
-                <input asp-for="Input.Model" placeholder="e.g. Actros 1845, 2016">
-            </div>
             <div class="field">
                 <label asp-for="Input.Name">Name</label>
                 <input asp-for="Input.Name" autocomplete="name">
@@ -77,10 +124,7 @@
             }
             <span asp-validation-for="Input.Email" class="field-error"></span>
         </div>
-        <div class="field">
-            <label asp-for="Input.Message">Message (optional)</label>
-            <textarea asp-for="Input.Message" placeholder="Anything we should know about the truck or the job"></textarea>
-        </div>
+        <p class="hint">You pay only when your file is ready.</p>
     </section>
 
     <div class="actions">

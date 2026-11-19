@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Text;
 using Core24.Web.Features.Contact;
 using Core24.Web.Features.Orders;
@@ -29,16 +29,21 @@ public class Notifier(
         var originals = order.OriginalFiles.ToList();
         var attach = originals.Sum(f => f.SizeBytes) <= MaxAttachmentBytes;
 
+        var special = order.Type == OrderType.SpecialRequest;
+
         var workshop = new StringBuilder()
-            .Append(P($"New order <b>{H(order.Reference)}</b> from {H(order.CustomerName)}."))
+            .Append(P(special
+                ? $"New <b>special request</b> <b>{H(order.Reference)}</b> from {H(order.CustomerName)}. It has no price yet: agree it with the customer (reply to this email), then set it on the admin page."
+                : $"New order <b>{H(order.Reference)}</b> from {H(order.CustomerName)}."))
             .Append(OrderSummaryHtml(order))
             .Append(attach
-                ? P("The original files are attached.")
+                ? P("The customer's files are attached.")
                 : P("The files are too large to attach. Download them from the admin page."))
             .Append(Button("Open in admin", App.Link($"/admin/orders/{order.Id}")))
             .Append(P("Reply to this email to answer the customer directly."));
 
-        await SendSafelyAsync(new EmailMessage(Email.WorkshopAddress, $"New order {order.Reference}: {order.VehicleMake} {order.Vin}", Layout(workshop.ToString()))
+        var subject = special ? "Special request" : "New order";
+        await SendSafelyAsync(new EmailMessage(Email.WorkshopAddress, $"{subject} {order.Reference}: {order.VehicleMake} {order.Vin}", Layout(workshop.ToString()))
         {
             ReplyTo = order.CustomerEmail,
             Attachments = attach ? originals.Select(f => new EmailAttachment(f.FileName, files.GetFullPath(f.StorageKey))).ToList() : [],
@@ -46,12 +51,17 @@ public class Notifier(
 
         var customer = new StringBuilder()
             .Append(P($"Hello {H(order.CustomerName)},"))
-            .Append(P($"we received your order <b>{H(order.Reference)}</b>. We'll email you as soon as the modified file is ready."))
+            .Append(P(special
+                ? $"we received your special request <b>{H(order.Reference)}</b>. We'll look at your files and email you the price before we start. You pay only when the file is ready."
+                : $"we received your order <b>{H(order.Reference)}</b>. We'll email you as soon as the file is ready."))
             .Append(OrderSummaryHtml(order))
             .Append(Button("View your order", OrderLink(order)))
             .Append(P("Keep this email: the button is your private link to the order."));
 
-        await SendSafelyAsync(new EmailMessage(order.CustomerEmail, $"Order {order.Reference} received", Layout(customer.ToString())), ct);
+        await SendSafelyAsync(new EmailMessage(order.CustomerEmail, $"{(special ? "Request" : "Order")} {order.Reference} received", Layout(customer.ToString()))
+        {
+            ReplyTo = Email.WorkshopAddress,
+        }, ct);
     }
 
     /// <summary>To the customer: the file is ready, please pay.</summary>
@@ -59,7 +69,7 @@ public class Notifier(
     {
         var body = new StringBuilder()
             .Append(P($"Hello {H(order.CustomerName)},"))
-            .Append(P($"your modified file for order <b>{H(order.Reference)}</b> is ready."))
+            .Append(P($"your file for order <b>{H(order.Reference)}</b> is ready."))
             .Append(P($"Total: <b>{H(Money.Format(order.TotalCents, order.Currency))}</b>. The download unlocks as soon as the payment is confirmed."))
             .Append(Button("Pay and download", OrderLink(order)));
 
@@ -84,7 +94,7 @@ public class Notifier(
     {
         var body = new StringBuilder()
             .Append(P($"Hello {H(order.CustomerName)},"))
-            .Append(P($"your modified file for order <b>{H(order.Reference)}</b> has been ready since {order.ReadyAtUtc:d MMM yyyy}, but it isn't paid yet."))
+            .Append(P($"your file for order <b>{H(order.Reference)}</b> has been ready since {order.ReadyAtUtc:d MMM yyyy}, but it isn't paid yet."))
             .Append(P($"Total: <b>{H(Money.Format(order.TotalCents, order.Currency))}</b>. The download unlocks as soon as the payment is confirmed."))
             .Append(Button("Pay and download", OrderLink(order)))
             .Append(P("Questions, or don't need the file any more? Just reply to this email."));
@@ -186,8 +196,9 @@ public class Notifier(
         if (order.CustomerPhone is not null) Row("Phone", order.CustomerPhone);
         Row("Vehicle", $"{order.VehicleMake} {order.VehicleModel}".Trim());
         if (order.Vin is not null) Row("VIN", order.Vin);
-        Row("Mods", string.Join(", ", order.Items.Select(i => $"{i.ModName} ({Money.Format(i.PriceCents, order.Currency)})")));
-        Row("Total", Money.Format(order.TotalCents, order.Currency));
+        if (order.Type == OrderType.SpecialRequest) Row("Type", "Special request");
+        foreach (var item in order.Items) Row("Ordered", item.Name);
+        Row("Price", order.PriceToBeAgreed ? "To be agreed by email" : Money.Format(order.TotalCents, order.Currency));
         if (order.CustomerNote is not null) Row("Message", order.CustomerNote);
         sb.Append("</table>");
 

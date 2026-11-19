@@ -13,6 +13,12 @@ public enum OrderStatus
     Refunded,    // was paid, the money went back to the customer; download locked again
 }
 
+public enum OrderType
+{
+    OriginalFile,    // a line from the price list: fixed price, known up front
+    SpecialRequest,  // anything else: the price is agreed by email, then the workshop sets it
+}
+
 public class Order
 {
     // Version 7 GUIDs start with a timestamp, so new rows land at the end of the index.
@@ -37,9 +43,10 @@ public class Order
     public string? Vin { get; set; }
     public string? CustomerNote { get; set; }
 
+    public OrderType Type { get; set; } = OrderType.OriginalFile;
     public OrderStatus Status { get; set; } = OrderStatus.Submitted;
 
-    /// <summary>Sum of the item prices at the moment of ordering, in cents.</summary>
+    /// <summary>Sum of the item prices, in cents. 0 for a special request until the workshop sets its price.</summary>
     public long TotalCents { get; set; }
     public required string Currency { get; set; }
 
@@ -64,20 +71,28 @@ public class Order
     /// </summary>
     public string Reference => Id.ToString("N")[^8..].ToUpperInvariant();
 
+    /// <summary>A special request whose price the workshop hasn't set yet.</summary>
+    public bool PriceToBeAgreed => TotalCents == 0;
+
+    /// <summary>"€320.00", or "To be agreed" while a special request has no price.</summary>
+    public string PriceText => PriceToBeAgreed ? "To be agreed" : Money.Format(TotalCents, Currency);
+
     public IEnumerable<OrderFile> OriginalFiles => Files.Where(f => f.Kind == OrderFileKind.Original);
     public IEnumerable<OrderFile> ModifiedFiles => Files.Where(f => f.Kind == OrderFileKind.Modified);
 }
 
 /// <summary>
-/// One chosen mod. Name and price are COPIED from the price list, so changing the
+/// What the customer pays for. Name and price are COPIED from the price list, so changing the
 /// price list later never changes what an old order costs.
 /// </summary>
 public class OrderItem
 {
     public int Id { get; set; }
     public Guid OrderId { get; set; }
-    public int ModId { get; set; }
-    public required string ModName { get; set; }
+
+    /// <summary>The price list line it came from; null when the workshop set the price by hand (special request).</summary>
+    public int? PriceListEntryId { get; set; }
+    public required string Name { get; set; }
     public long PriceCents { get; set; }
 }
 

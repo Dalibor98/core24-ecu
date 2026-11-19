@@ -81,33 +81,44 @@ namespace Core24.Web.Data.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
-            modelBuilder.Entity("Core24.Web.Features.Catalog.Mod", b =>
+            modelBuilder.Entity("Core24.Web.Features.Catalog.PriceListEntry", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
+                    b.Property<string>("Brand")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Ecu")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Engine")
+                        .IsRequired()
+                        .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("Name")
+                    b.Property<string>("Model")
                         .IsRequired()
-                        .HasMaxLength(120)
+                        .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
                     b.Property<long>("PriceCents")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("INTEGER");
-
                     b.HasKey("Id");
 
-                    b.ToTable("Mods");
+                    b.HasIndex("Brand", "Model", "Engine", "Ecu")
+                        .IsUnique();
+
+                    b.ToTable("PriceList", (string)null);
                 });
 
             modelBuilder.Entity("Core24.Web.Features.Orders.Order", b =>
@@ -175,6 +186,11 @@ namespace Core24.Web.Data.Migrations
                     b.Property<long>("TotalCents")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("UserId")
                         .HasColumnType("TEXT");
 
@@ -184,7 +200,7 @@ namespace Core24.Web.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("VehicleModel")
-                        .HasMaxLength(100)
+                        .HasMaxLength(250)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Vin")
@@ -274,18 +290,18 @@ namespace Core24.Web.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("ModId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("ModName")
+                    b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(120)
+                        .HasMaxLength(300)
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("OrderId")
                         .HasColumnType("TEXT");
 
                     b.Property<long>("PriceCents")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("PriceListEntryId")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");

@@ -18,14 +18,17 @@
         @if (signedIn)
         {
             <p class="menu-who">Logged in as<br><b>@User.Identity?.Name</b></p>
-            <a asp-page="/Account/Index">My orders</a>
-            <a asp-page="/Orders/New">Send a file</a>
+            @* The workshop works in the admin area; it has no orders of its own and doesn't send files. *@
             if (User.IsInRole(Roles.Admin))
             {
-                <hr>
                 <p class="menu-section">Workshop</p>
                 <a asp-page="/Admin/Index">Orders</a>
-                <a asp-page="/Admin/Mods">Price list</a>
+                <a asp-page="/Admin/PriceList">Price list</a>
+            }
+            else
+            {
+                <a asp-page="/Account/Index">My orders</a>
+                <a asp-page="/Orders/New">Send a file</a>
             }
             <hr>
             @* Logging out changes state, so it's a POST with an anti-forgery token, not a link. *@

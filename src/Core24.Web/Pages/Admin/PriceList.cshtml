@@ -1,0 +1,84 @@
+@page "/admin/price-list"
+@model Core24.Web.Pages.Admin.PriceListModel
+@using System.Globalization
+@{
+    ViewData["Title"] = "Price list";
+    ViewData["MainClass"] = "wide";
+}
+<div class="head">
+    <p class="eyebrow"><a asp-page="/Admin/Index">Orders</a> / Price list</p>
+    <h1>Price list</h1>
+    <p class="lede">The vehicles and computers customers can pick on the order form, with the price of the original file. @Model.Total lines are offered now. Price changes apply to new orders only.</p>
+</div>
+
+@if (Model.Flash is not null)
+{
+    <div class="notice">@Model.Flash</div>
+}
+
+<section class="card">
+    <h2>Load the whole list from a file</h2>
+    <p class="hint">
+        A CSV file (Excel: Save as → CSV) whose first line is <span class="mono">brand;model;engine;ecu;price</span>.
+        The file replaces the list: new lines are added, changed prices are updated, and lines that are not in the file are no longer offered.
+        If any line has a mistake, nothing changes and you see which line it was.
+    </p>
+    <form method="post" enctype="multipart/form-data" asp-page-handler="Import" class="actions"
+          data-confirm="Replace the price list with this file?">
+        <input name="file" type="file" accept=".csv" required style="max-width:26rem">
+        <button class="btn" type="submit">Import</button>
+    </form>
+</section>
+
+<section class="card">
+    <h2>Find a line</h2>
+    <form method="get" class="actions">
+        <input name="Q" value="@Model.Q" placeholder="e.g. scania dc13 s7" style="max-width:26rem">
+        <button class="btn" type="submit">Search</button>
+        @if (!string.IsNullOrEmpty(Model.Q))
+        {
+            <a class="btn" asp-page="/Admin/PriceList">Show all</a>
+        }
+    </form>
+    <p class="hint">@Model.Matches line(s) found. Page @Model.P of @Model.PageCount.</p>
+
+    @* One small form per row: each "Save" sends just that line. *@
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Brand</th><th>Model</th><th>Engine</th><th>Computer</th><th class="num">Price (@Model.Currency)</th><th>Offered</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var p in Model.Entries)
+                {
+                    <tr>
+                        <td>@p.Brand</td>
+                        <td>@p.Model</td>
+                        <td>@p.Engine</td>
+                        <td>@p.Ecu</td>
+                        <td><input form="line-@p.Id" name="price" value="@((p.PriceCents / 100m).ToString("0.00", CultureInfo.InvariantCulture))" inputmode="decimal" style="width:8rem"></td>
+                        <td><input form="line-@p.Id" name="isActive" value="true" type="checkbox" checked="@p.IsActive"></td>
+                        <td>
+                            <form id="line-@p.Id" method="post" asp-page-handler="Save" asp-route-id="@p.Id" asp-route-Q="@Model.Q" asp-route-P="@Model.P">
+                                <button class="btn small" type="submit">Save</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    @if (Model.PageCount > 1)
+    {
+        <nav class="actions">
+            @if (Model.P > 1)
+            {
+                <a class="btn small" asp-page="/Admin/PriceList" asp-route-Q="@Model.Q" asp-route-P="@(Model.P - 1)">← Previous</a>
+            }
+            <span class="muted">Page @Model.P of @Model.PageCount</span>
+            @if (Model.P < Model.PageCount)
+            {
+                <a class="btn small" asp-page="/Admin/PriceList" asp-route-Q="@Model.Q" asp-route-P="@(Model.P + 1)">Next →</a>
+            }
+        </nav>
+    }
+    <p class="hint">Use a dot for decimals: 320.50. Untick "Offered" to hide a line from customers without deleting it.</p>
+</section>

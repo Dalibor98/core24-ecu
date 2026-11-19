@@ -2,6 +2,7 @@ using System.Buffers.Text;
 using System.ComponentModel.DataAnnotations;
 using System.Security.Cryptography;
 using Core24.Web.Data;
+using Core24.Web.Features.Catalog;
 using Core24.Web.Features.Notifications;
 using Core24.Web.Features.Storage;
 using Microsoft.EntityFrameworkCore;
@@ -21,16 +22,26 @@ public class NewOrderInput
     [Phone, StringLength(40)]
     public string? Phone { get; set; }
 
-    [Required, StringLength(40)]
-    public string Make { get; set; } = "";
+    public OrderType Type { get; set; } = OrderType.OriginalFile;
 
-    [StringLength(100), Display(Name = "Model and year")]
+    /// <summary>
+    /// The vehicle and computer the customer clicked in the price list. Required for an original file.
+    /// For a special request it's the vehicle, unless the customer ticked "my vehicle isn't in the list".
+    /// </summary>
+    public int? PriceListEntryId { get; set; }
+
+    /// <summary>Special requests only: the vehicle isn't in the price list, so it's typed into Make and Model.</summary>
+    public bool VehicleNotListed { get; set; }
+
+    [StringLength(40)]
+    public string? Make { get; set; }
+
+    [StringLength(100), Display(Name = "Model, engine and year")]
     public string? Model { get; set; }
 
+    /// <summary>Optional for an original file; for a special request it describes the job, so it's required.</summary>
     [StringLength(2000)]
     public string? Message { get; set; }
-
-    public List<int> ModIds { get; set; } = [];
 }
 
 public class UploadOptions
@@ -81,11 +92,25 @@ public class OrderService(
         // 1. Validate everything we can before touching the disk.
         var errors = ValidateFiles(uploads, "Files");
 
-        var mods = await db.Mods.Where(m => input.ModIds.Contains(m.Id) && m.IsActive).OrderBy(m => m.SortOrder).ToListAsync(ct);
-        if (mods.Count == 0)
-            errors.Add(new("ModIds", "Choose at least one modification."));
-        else if (mods.Count != input.ModIds.Distinct().Count())
-            errors.Add(new("ModIds", "One of the chosen modifications is no longer offered. Please choose again."));
+        var special = input.Type == OrderType.SpecialRequest;
+        var typedVehicle = special && input.VehicleNotListed;
+
+        // The vehicle comes from the price list (clicked, so no typos), except for a special request
+        // for a vehicle that isn't in the list.
+        PriceListEntry? entry = null;
+        if (!typedVehicle)
+        {
+            entry = input.PriceListEntryId is { } id ? await db.PriceList.SingleOrDefaultAsync(p => p.Id == id && p.IsActive, ct) : null;
+            if (entry is null)
+                errors.Add(new("PriceListEntryId", input.PriceListEntryId is null
+                    ? "Choose your vehicle and its computer."
+                    : "That vehicle is no longer in our price list. Please choose again."));
+        }
+        else if (string.IsNullOrWhiteSpace(input.Make))
+            errors.Add(new("Make", "Enter the vehicle's make."));
+
+        if (special && string.IsNullOrWhiteSpace(input.Message))
+            errors.Add(new("Message", "Describe what you need, so we can tell you the price."));
 
         if (errors.Count > 0) return new(null, errors);
 
@@ -94,18 +119,22 @@ public class OrderService(
         {
             AccessToken = NewAccessToken(),
             UserId = userId,
+            Type = input.Type,
             CustomerName = input.Name.Trim(),
             CustomerEmail = input.Email.Trim(),
             CustomerEmailNormalized = input.Email.Trim().ToUpperInvariant(),
             CustomerPhone = Blank(input.Phone),
-            VehicleMake = input.Make.Trim(),
-            VehicleModel = Blank(input.Model),
+            VehicleMake = entry?.Brand ?? input.Make!.Trim(),
+            VehicleModel = entry is null ? Blank(input.Model) : Cut($"{entry.Model} · {entry.Engine} · {entry.Ecu}", 250),
             CustomerNote = Blank(input.Message),
             Currency = appOptions.Value.Currency,
             CreatedAtUtc = now,
-            // Copy name and price: the order keeps the price it was sold at.
-            Items = mods.Select(m => new OrderItem { ModId = m.Id, ModName = m.Name, PriceCents = m.PriceCents }).ToList(),
         };
+
+        // An original file has its price up front. Copy name and price: the order keeps the price it was sold at.
+        // A special request starts without a price (TotalCents 0); the workshop sets it after agreeing it by email.
+        if (!special)
+            order.Items.Add(new OrderItem { PriceListEntryId = entry!.Id, Name = Cut($"Original file: {entry.Description}", 300), PriceCents = entry.PriceCents });
         order.TotalCents = order.Items.Sum(i => i.PriceCents);
 
         // 2. Store the files. Disk and database can't share one transaction,
@@ -133,7 +162,7 @@ public class OrderService(
             throw;
         }
 
-        log.LogInformation("Order {Reference} created with {Count} file(s)", order.Reference, order.Files.Count);
+        log.LogInformation("Order {Reference} ({Type}) created with {Count} file(s)", order.Reference, order.Type, order.Files.Count);
 
         // 3. Only after the order is safely saved: tell people about it.
         await notifier.OrderSubmittedAsync(order, ct);
@@ -187,6 +216,37 @@ public class OrderService(
         return true;
     }
 
+    /// <summary>
+    /// The workshop sets the price before the file is ready: the price agreed by email for a special request,
+    /// or a corrected price when the customer picked the wrong computer. Replaces whatever was there.
+    /// </summary>
+    public async Task<OrderError?> SetPriceAsync(Guid orderId, string? name, long priceCents, CancellationToken ct = default)
+    {
+        if (priceCents <= 0) return new("Price", "The price must be more than 0.");
+
+        // Price and status are checked and changed in ONE transaction: the order can't be marked ready
+        // (and the customer asked to pay) in the middle of a price change.
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        var changed = await db.Orders
+            .Where(o => o.Id == orderId && (o.Status == OrderStatus.Submitted || o.Status == OrderStatus.InProgress))
+            .ExecuteUpdateAsync(s => s.SetProperty(o => o.TotalCents, priceCents), ct);
+        if (changed == 0) return new("", "The price can only change before the order is marked ready.");
+
+        var old = await db.OrderItems.Where(i => i.OrderId == orderId).ToListAsync(ct);
+        db.OrderItems.RemoveRange(old);
+        db.OrderItems.Add(new OrderItem
+        {
+            OrderId = orderId,
+            // Keep the link to the price list when the workshop only corrects the price of a price-list line.
+            PriceListEntryId = old.Count == 1 ? old[0].PriceListEntryId : null,
+            Name = Cut(Blank(name) ?? (old.Count == 1 ? old[0].Name : "Special request"), 300),
+            PriceCents = priceCents,
+        });
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        return null;
+    }
+
     /// <summary>Workshop is done: the customer gets the "ready, please pay" email.</summary>
     public async Task<OrderError?> MarkReadyAsync(Guid orderId, CancellationToken ct = default)
     {
@@ -194,12 +254,13 @@ public class OrderService(
         if (order is null) return new("", "Order not found.");
         if (order.Status is not (OrderStatus.Submitted or OrderStatus.InProgress)) return new("", $"An order that is {order.Status} can't be marked ready.");
         if (!order.ModifiedFiles.Any()) return new("", "Upload the modified file first.");
+        if (order.PriceToBeAgreed) return new("", "Set the price first (agree it with the customer by email).");
 
         // The checks above read the order; between that read and a save, a second click could
         // pass the same checks. The conditional UPDATE lets only one of them through, so only one email goes out.
         var now = time.GetUtcNow().UtcDateTime;
         var changed = await db.Orders
-            .Where(o => o.Id == orderId && (o.Status == OrderStatus.Submitted || o.Status == OrderStatus.InProgress))
+            .Where(o => o.Id == orderId && o.TotalCents > 0 && (o.Status == OrderStatus.Submitted || o.Status == OrderStatus.InProgress))
             .ExecuteUpdateAsync(s => s.SetProperty(o => o.Status, OrderStatus.Ready).SetProperty(o => o.ReadyAtUtc, now), ct);
         if (changed == 0) return new("", "The order was already marked ready.");
 
@@ -296,4 +357,7 @@ public class OrderService(
     private static string NewAccessToken() => Base64Url.EncodeToString(RandomNumberGenerator.GetBytes(32));
 
     private static string? Blank(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+
+    /// <summary>Shortens text to fit its database column.</summary>
+    private static string Cut(string s, int max) => s.Length <= max ? s : s[..max];
 }

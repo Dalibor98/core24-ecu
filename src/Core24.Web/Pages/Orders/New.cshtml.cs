@@ -16,8 +16,6 @@ namespace Core24.Web.Pages.Orders;
 [EnableRateLimiting("uploads")]
 public class NewModel(AppDbContext db, OrderService orders, UserManager<AppUser> users, IOptions<UploadOptions> uploadOptions, IOptions<AppOptions> appOptions) : PageModel
 {
-    // Same list as the landing page's booking form.
-    public static readonly string[] Makes = ["Mercedes-Benz", "Volvo", "Scania", "MAN", "DAF", "Iveco", "Renault Trucks", "Other"];
 
     [BindProperty]
     public NewOrderInput Input { get; set; } = new();
@@ -25,7 +23,7 @@ public class NewModel(AppDbContext db, OrderService orders, UserManager<AppUser>
     [BindProperty]
     public List<IFormFile> Files { get; set; } = [];
 
-    public List<Mod> Mods { get; private set; } = [];
+    public List<PriceListEntry> PriceList { get; private set; } = [];
     public UploadOptions Uploads => uploadOptions.Value;
     public string Currency => appOptions.Value.Currency;
     public bool SignedIn => User.Identity?.IsAuthenticated == true;
@@ -35,8 +33,7 @@ public class NewModel(AppDbContext db, OrderService orders, UserManager<AppUser>
         // The workshop (admin) handles orders from the admin area, not the customer form.
         if (User.IsInRole(Roles.Admin)) return RedirectToPage("/Admin/Index");
 
-        await LoadModsAsync();
-        Input.Make = Makes[0];
+        await LoadPriceListAsync();
 
         // Logged-in customers don't retype their email.
         if (await users.GetUserAsync(User) is { } user)
@@ -59,7 +56,7 @@ public class NewModel(AppDbContext db, OrderService orders, UserManager<AppUser>
 
         if (!ModelState.IsValid)
         {
-            await LoadModsAsync();
+            await LoadPriceListAsync();
             return Page();
         }
 
@@ -67,8 +64,8 @@ public class NewModel(AppDbContext db, OrderService orders, UserManager<AppUser>
         if (!result.Succeeded)
         {
             foreach (var error in result.Errors)
-                ModelState.AddModelError(error.Field == "ModIds" ? "Input.ModIds" : error.Field, error.Message);
-            await LoadModsAsync();
+                ModelState.AddModelError(error.Field == "Files" ? "Files" : $"Input.{error.Field}", error.Message);
+            await LoadPriceListAsync();
             return Page();
         }
 
@@ -76,6 +73,7 @@ public class NewModel(AppDbContext db, OrderService orders, UserManager<AppUser>
         return Redirect($"/o/{result.Order!.AccessToken}?new=1");
     }
 
-    private async Task LoadModsAsync() =>
-        Mods = await db.Mods.Where(m => m.IsActive).OrderBy(m => m.SortOrder).ThenBy(m => m.Name).ToListAsync();
+    // Brands A to Z; inside a brand, the order of the workshop's list (small engines first).
+    private async Task LoadPriceListAsync() =>
+        PriceList = await db.PriceList.AsNoTracking().Where(p => p.IsActive).OrderBy(p => p.Brand).ThenBy(p => p.Id).ToListAsync();
 }

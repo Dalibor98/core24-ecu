@@ -27,3 +27,7 @@
   /* The button isn't at the screen edge on every page, so pin the panel to the screen instead. */
   .menu-panel{position:fixed;left:16px;right:16px;top:calc(env(safe-area-inset-top,0px) + 64px);width:auto;max-width:none}
 }
+
+/* Shown only to the workshop on the public landing page (js/menu.js) */
+.admin-bar{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:60;max-width:calc(100vw - 32px);padding:12px 18px;border:1px solid rgba(56,212,255,.5);border-radius:12px;background:rgba(6,8,11,.94);color:#e8edf2;font:500 14px/1.4 system-ui,sans-serif;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+.admin-bar a{margin-left:6px;color:#38d4ff;font-weight:700;white-space:nowrap}

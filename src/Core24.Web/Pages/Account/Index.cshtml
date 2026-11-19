@@ -29,7 +29,7 @@ else
                         <td>@o.CreatedAtUtc.ToString("d MMM yyyy")</td>
                         <td>@o.VehicleMake @o.VehicleModel</td>
                         <td><span class="status @o.Status">@o.Status</span></td>
-                        <td class="num">@Money.Format(o.TotalCents, o.Currency)</td>
+                        <td class="num">@o.PriceText</td>
                     </tr>
                 }
             </tbody>

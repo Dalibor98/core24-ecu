@@ -31,7 +31,14 @@
 {
     case OrderStatus.Submitted:
     case OrderStatus.InProgress:
-        <div class="notice">We're working on your file. You'll get an email when it's ready.</div>
+        @if (o.PriceToBeAgreed)
+        {
+            <div class="notice">We received your request. We'll look at your files and <b>email you the price</b> before we start. You pay only when the file is ready.</div>
+        }
+        else
+        {
+            <div class="notice">We're working on your file. You'll get an email when it's ready.</div>
+        }
         break;
 
     case OrderStatus.Ready when Model.ReturnedFromPayment:
@@ -84,9 +91,13 @@
         <table>
             @foreach (var item in o.Items)
             {
-                <tr><td>@item.ModName</td><td class="num">@Money.Format(item.PriceCents, o.Currency)</td></tr>
+                <tr><td>@item.Name</td><td class="num">@Money.Format(item.PriceCents, o.Currency)</td></tr>
             }
-            <tr class="total"><td>Total</td><td class="num">@Money.Format(o.TotalCents, o.Currency)</td></tr>
+            @if (o.Type == OrderType.SpecialRequest && o.Items.Count == 0)
+            {
+                <tr><td>Special request</td><td class="num"></td></tr>
+            }
+            <tr class="total"><td>Total</td><td class="num">@o.PriceText</td></tr>
         </table>
     </div>
 </section>

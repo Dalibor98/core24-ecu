@@ -130,11 +130,12 @@ builder.Services.AddSingleton<IFileStore, LocalFileStore>();
 builder.Services.AddSingleton<DownloadLinks>();
 builder.Services.AddScoped<Notifier>();
 builder.Services.AddScoped<OrderService>();
+builder.Services.AddScoped<Core24.Web.Features.Catalog.PriceListImport>();
 builder.Services.AddScoped<PaymentService>();
 builder.Services.AddScoped<GuestOrderClaimer>();
 builder.Services.AddScoped<Maintenance>();
 
-// Background jobs: they run for as long as the app runs (lesson 11).
+// Background jobs: they run for as long as the app runs.
 builder.Services.AddHostedService<MaintenanceService>();
 builder.Services.AddHostedService<ErrorAlertService>();
 

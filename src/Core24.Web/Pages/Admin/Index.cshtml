@@ -8,7 +8,9 @@
     <p class="eyebrow">Admin</p>
     <h1>Orders</h1>
     <div class="actions">
-        <a class="btn small" asp-page="/Admin/Mods">Price list</a>
+        <a class="btn small" asp-page="/Admin/PriceList">Price list</a>
+        <a class="btn small" asp-page="/Account/Password">Change password</a>
+        <a class="btn small" asp-page="/Account/TwoFactor">Two-factor login</a>
     </div>
 </div>
 
@@ -37,8 +39,8 @@
                         <td>@o.CreatedAtUtc.ToString("d MMM HH:mm") UTC</td>
                         <td>@o.CustomerName<br><span class="muted">@o.CustomerEmail</span></td>
                         <td>@o.VehicleMake @o.VehicleModel<br><span class="muted mono">@o.Vin</span></td>
-                        <td><span class="status @o.Status">@o.Status</span></td>
-                        <td class="num">@Money.Format(o.TotalCents, o.Currency)</td>
+                        <td><span class="status @o.Status">@o.Status</span>@if (o.Type == OrderType.SpecialRequest) { <br><span class="muted">Special request</span> }</td>
+                        <td class="num">@o.PriceText</td>
                     </tr>
                 }
             </tbody>

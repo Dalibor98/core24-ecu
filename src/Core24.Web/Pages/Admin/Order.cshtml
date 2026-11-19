@@ -9,6 +9,10 @@
 <div class="head">
     <p class="eyebrow"><a asp-page="/Admin/Index">Orders</a> / <span class="mono">@o.Reference</span></p>
     <h1>@o.VehicleMake @o.VehicleModel</h1>
+    @if (o.Type == OrderType.SpecialRequest)
+    {
+        <p class="eyebrow">Special request</p>
+    }
     <partial name="_StatusSteps" model="o.Status" />
 </div>
 
@@ -22,7 +26,7 @@
         <h2>Customer</h2>
         <dl class="facts">
             <dt>Name</dt><dd>@o.CustomerName</dd>
-            <dt>Email</dt><dd><a href="mailto:@o.CustomerEmail">@o.CustomerEmail</a></dd>
+            <dt>Email</dt><dd><a href="mailto:@o.CustomerEmail?subject=@Uri.EscapeDataString($"CORE24 order {o.Reference}")">@o.CustomerEmail</a></dd>
             @if (o.CustomerPhone is not null)
             {
                 <dt>Phone</dt><dd>@o.CustomerPhone</dd>
@@ -42,10 +46,31 @@
         <table>
             @foreach (var item in o.Items)
             {
-                <tr><td>@item.ModName</td><td class="num">@Money.Format(item.PriceCents, o.Currency)</td></tr>
+                <tr><td>@item.Name</td><td class="num">@Money.Format(item.PriceCents, o.Currency)</td></tr>
             }
-            <tr class="total"><td>Total</td><td class="num">@Money.Format(o.TotalCents, o.Currency)</td></tr>
+            <tr class="total"><td>Total</td><td class="num">@o.PriceText</td></tr>
         </table>
+        @if (o.PriceToBeAgreed)
+        {
+            <div class="notice warn">No price yet. Agree it with the customer by email (click their address), then set it here. The order can't be marked ready without a price.</div>
+        }
+        @if (editable)
+        {
+            @* Sets the agreed price of a special request, or corrects a price (the customer picked the wrong computer). *@
+            <form method="post" asp-page-handler="Price" asp-route-id="@o.Id" class="stack">
+                <div class="grid2">
+                    <div class="field">
+                        <label for="priceName">What the customer pays for</label>
+                        <input id="priceName" name="name" value="@(o.Items.Count == 1 ? o.Items[0].Name : "Special request")" maxlength="300" required>
+                    </div>
+                    <div class="field">
+                        <label for="price">Price (@o.Currency)</label>
+                        <input id="price" name="price" inputmode="decimal" placeholder="0.00" value="@(o.PriceToBeAgreed ? "" : (o.TotalCents / 100m).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture))" required>
+                    </div>
+                </div>
+                <div class="actions"><button class="btn small" type="submit">@(o.PriceToBeAgreed ? "Set price" : "Change price")</button></div>
+            </form>
+        }
         @if (o.Vin is not null)
         {
             <dl class="facts"><dt>VIN</dt><dd class="mono">@o.Vin @(Vin.MakeFromWmi(o.Vin) is { } make ? $"({make})" : "")</dd></dl>
@@ -83,7 +108,7 @@
 </section>
 
 <section class="card">
-    <h2>Modified files</h2>
+    <h2>Files for the customer</h2>
     @if (o.ModifiedFiles.Any())
     {
         <ul class="files">
@@ -114,7 +139,7 @@
     {
         <form method="post" enctype="multipart/form-data" asp-page-handler="Upload" asp-route-id="@o.Id" class="stack">
             <div class="field">
-                <label for="modifiedFiles">Upload modified file(s)</label>
+                <label for="modifiedFiles">Upload the finished file(s)</label>
                 <input id="modifiedFiles" name="modifiedFiles" type="file" multiple required>
             </div>
             <div class="actions"><button class="btn" type="submit">Upload</button></div>
@@ -132,7 +157,7 @@
         @if (editable)
         {
             <form method="post" asp-page-handler="Ready" asp-route-id="@o.Id">
-                <button class="btn primary" type="submit" disabled="@(!o.ModifiedFiles.Any())">Mark ready &amp; ask for payment</button>
+                <button class="btn primary" type="submit" disabled="@(!o.ModifiedFiles.Any() || o.PriceToBeAgreed)">Mark ready &amp; ask for payment</button>
             </form>
         }
         @if (o.Status is OrderStatus.Submitted or OrderStatus.InProgress or OrderStatus.Ready)

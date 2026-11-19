@@ -51,6 +51,15 @@ public class OrderModel(AppDbContext db, OrderService orders, PaymentService pay
         return RedirectToPage(new { id });
     }
 
+    public async Task<IActionResult> OnPostPriceAsync(Guid id, string? name, string? price, CancellationToken ct)
+    {
+        if (!Money.TryParseCents(price, out var cents))
+            Flash = "The price must look like 320 or 320.50.";
+        else
+            Flash = (await orders.SetPriceAsync(id, name, cents, ct))?.Message ?? "Price saved.";
+        return RedirectToPage(new { id });
+    }
+
     public async Task<IActionResult> OnPostReadyAsync(Guid id, CancellationToken ct)
     {
         var error = await orders.MarkReadyAsync(id, ct);

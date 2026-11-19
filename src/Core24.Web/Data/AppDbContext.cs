@@ -17,7 +17,7 @@ public class AppUser : IdentityUser
 /// </summary>
 public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbContext<AppUser>(options)
 {
-    public DbSet<Mod> Mods => Set<Mod>();
+    public DbSet<PriceListEntry> PriceList => Set<PriceListEntry>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<OrderFile> OrderFiles => Set<OrderFile>();
@@ -27,10 +27,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     {
         base.OnModelCreating(builder); // Identity's own table setup
 
-        builder.Entity<Mod>(e =>
+        builder.Entity<PriceListEntry>(e =>
         {
-            e.Property(m => m.Name).HasMaxLength(120);
-            e.Property(m => m.Description).HasMaxLength(500);
+            e.ToTable("PriceList");
+            // The import matches lines by these four columns: one line per vehicle + computer.
+            e.HasIndex(p => new { p.Brand, p.Model, p.Engine, p.Ecu }).IsUnique();
+            e.Property(p => p.Brand).HasMaxLength(40);
+            e.Property(p => p.Model).HasMaxLength(100);
+            e.Property(p => p.Engine).HasMaxLength(100);
+            e.Property(p => p.Ecu).HasMaxLength(100);
+            e.Ignore(p => p.Description);
         });
 
         builder.Entity<Order>(e =>
@@ -42,6 +48,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
 
             // Enums as text ("Paid" instead of 3): readable when you open the database.
             e.Property(o => o.Status).HasConversion<string>().HasMaxLength(20);
+            e.Property(o => o.Type).HasConversion<string>().HasMaxLength(20);
 
             e.Property(o => o.AccessToken).HasMaxLength(64);
             e.Property(o => o.CustomerName).HasMaxLength(100);
@@ -49,7 +56,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
             e.Property(o => o.CustomerEmailNormalized).HasMaxLength(254);
             e.Property(o => o.CustomerPhone).HasMaxLength(40);
             e.Property(o => o.VehicleMake).HasMaxLength(40);
-            e.Property(o => o.VehicleModel).HasMaxLength(100);
+            e.Property(o => o.VehicleModel).HasMaxLength(250);
             e.Property(o => o.Vin).HasMaxLength(17);
             e.Property(o => o.CustomerNote).HasMaxLength(2000);
             e.Property(o => o.Currency).HasMaxLength(3);
@@ -62,11 +69,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
 
             // Computed in C#, not columns.
             e.Ignore(o => o.Reference);
+            e.Ignore(o => o.PriceToBeAgreed);
+            e.Ignore(o => o.PriceText);
             e.Ignore(o => o.OriginalFiles);
             e.Ignore(o => o.ModifiedFiles);
         });
 
-        builder.Entity<OrderItem>(e => e.Property(i => i.ModName).HasMaxLength(120));
+        builder.Entity<OrderItem>(e => e.Property(i => i.Name).HasMaxLength(300));
 
         builder.Entity<OrderFile>(e =>
         {

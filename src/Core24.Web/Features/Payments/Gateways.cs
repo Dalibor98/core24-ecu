@@ -47,7 +47,7 @@ public class StripePaymentGateway(IOptions<PaymentOptions> options) : IPaymentGa
             CustomerEmail = order.CustomerEmail,
             ClientReferenceId = order.Id.ToString(),
             Metadata = new Dictionary<string, string> { ["orderId"] = order.Id.ToString(), ["reference"] = order.Reference },
-            // One line per mod, priced from the ORDER (the snapshot), not from the current price list.
+            // One line per order item, priced from the ORDER (the snapshot), not from the current price list.
             LineItems = order.Items.Select(i => new SessionLineItemOptions
             {
                 Quantity = 1,
@@ -55,7 +55,7 @@ public class StripePaymentGateway(IOptions<PaymentOptions> options) : IPaymentGa
                 {
                     Currency = order.Currency.ToLowerInvariant(),
                     UnitAmount = i.PriceCents,
-                    ProductData = new SessionLineItemPriceDataProductDataOptions { Name = $"{i.ModName} (order {order.Reference})" },
+                    ProductData = new SessionLineItemPriceDataProductDataOptions { Name = $"{i.Name} (order {order.Reference})" },
                 },
             }).ToList(),
         }, cancellationToken: ct);

@@ -18,15 +18,18 @@ public static class DbInitializer
         var db = sp.GetRequiredService<AppDbContext>();
         await db.Database.MigrateAsync();
 
-        if (!await db.Mods.AnyAsync())
+        if (!await db.PriceList.AnyAsync())
         {
-            // PLACEHOLDERS taken from the site's services list. The workshop sets real names
-            // and prices in Admin → Price list.
-            db.Mods.AddRange(
-                new Mod { Name = "Stage 1 performance remap", Description = "More torque for heavy loads and long climbs.", PriceCents = 29000, SortOrder = 10 },
-                new Mod { Name = "Economy remap", Description = "Lower fuel use on long highway runs.", PriceCents = 24000, SortOrder = 20 });
+            // A FEW EXAMPLE LINES so the order form works on an empty database.
+            // The workshop loads its real list in Admin → Price list → Import.
+            db.PriceList.AddRange(
+                new PriceListEntry { Brand = "Mercedes-Benz", Model = "Actros / Arocs / Axor", Engine = "12.8TDI 420-530hp OM471", Ecu = "Continental MCM/ACM/CPC", PriceCents = 37000 },
+                new PriceListEntry { Brand = "Mercedes-Benz", Model = "Actros / Arocs / Axor", Engine = "12.8TDI 420-530hp OM460", Ecu = "Temic ZGS/ACM DCU15", PriceCents = 34000 },
+                new PriceListEntry { Brand = "Scania", Model = "DC13 Series G/P/R/T E5", Engine = "12.7TDI 380-480hp", Ecu = "Motorola EMS S6/ACM DCU15", PriceCents = 30000 },
+                new PriceListEntry { Brand = "Scania", Model = "DC13 Series G/P/R/T E5", Engine = "12.7TDI 380-480hp", Ecu = "Motorola EMS S7", PriceCents = 33000 },
+                new PriceListEntry { Brand = "Volvo", Model = "D13 Euro-5", Engine = "12.8TDI 290-540hp", Ecu = "TRW EMS2.2/ACM", PriceCents = 34000 });
             await db.SaveChangesAsync();
-            log.LogInformation("Seeded placeholder price list");
+            log.LogInformation("Seeded example price list lines");
         }
 
         var roles = sp.GetRequiredService<RoleManager<IdentityRole>>();

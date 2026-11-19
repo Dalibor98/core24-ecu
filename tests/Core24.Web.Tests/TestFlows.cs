@@ -27,19 +27,32 @@ public static class TestFlows
         return location.Split('?')[0];
     }
 
-    public static MultipartFormDataContent OrderForm(string token, string email, string fileName, byte[] bytes)
+    /// <summary>
+    /// The order form's fields. Without <paramref name="choices"/> it is the common case: the original file
+    /// for the first seeded price list line (Mercedes-Benz Actros, €370). Pass choices to order something else.
+    /// </summary>
+    public static MultipartFormDataContent OrderForm(string token, string email, string fileName, byte[] bytes, params (string Name, string Value)[] choices)
     {
         var form = new MultipartFormDataContent
         {
             { new StringContent(token), "__RequestVerificationToken" },
             { new StringContent("Test Driver"), "Input.Name" },
             { new StringContent(email), "Input.Email" },
-            { new StringContent("Mercedes-Benz"), "Input.Make" },
-            { new StringContent("Actros 1845"), "Input.Model" },
-            { new StringContent("1"), "Input.ModIds" }, // seeded "Stage 1 performance remap"
         };
+        if (choices.Length == 0)
+            choices = [("Input.Type", "OriginalFile"), ("Input.PriceListEntryId", "1")];
+        foreach (var (name, value) in choices)
+            form.Add(new StringContent(value), name);
         form.Add(FilePart(bytes, fileName), "Files", fileName);
         return form;
+    }
+
+    /// <summary>Posts the order form with the given choices and returns the raw response (a redirect, or the form again with errors).</summary>
+    public static async Task<HttpResponseMessage> PostOrderAsync(HttpClient browser, string email, params (string Name, string Value)[] choices)
+    {
+        var token = await browser.GetFormTokenAsync("/order/new");
+        using var form = OrderForm(token, email, "dump.bin", RandomBytes(1024), choices);
+        return await browser.PostAsync("/order/new", form);
     }
 
     public static async Task<string> RegisterAsync(HttpClient browser, string email, string password)

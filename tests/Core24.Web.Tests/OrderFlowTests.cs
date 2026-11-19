@@ -35,7 +35,7 @@ public class OrderFlowTests : IDisposable
         Assert.Equal(OrderStatus.Submitted, order.Status);
         Assert.Equal("WDB9634031L927285", order.Vin);
         Assert.True(order.Files.Single().NameChecksumMatches);
-        Assert.Equal(29000, order.TotalCents); // the seeded Stage 1 placeholder price
+        Assert.Equal(37000, order.TotalCents); // the first seeded price list line
 
         var emails = app.Emails();
         Assert.Equal(2, emails.Count);
@@ -61,7 +61,7 @@ public class OrderFlowTests : IDisposable
 
         // 3. Customer can't download before paying.
         var page = await customer.GetStringAsync(orderLink);
-        Assert.Contains("Pay €290.00", page);
+        Assert.Contains("Pay €370.00", page);
         Assert.DoesNotContain("/download/", page);
 
         // 4. Customer pays (through the dev checkout that stands in for Stripe).
@@ -154,9 +154,15 @@ public class OrderFlowTests : IDisposable
         Assert.Contains("\"signedIn\":true", me);
         Assert.Contains("\"isAdmin\":true", me);
 
-        var page = await browser.GetStringAsync("/order/new");
+        var page = await browser.GetStringAsync("/admin");
         Assert.Contains("admin@core24.local", page);
         Assert.Contains("Price list", page);
+
+        // The workshop doesn't place customer orders: the order form sends the admin to the admin area.
+        Assert.Equal("/admin", AssertRedirect(await browser.GetAsync("/order/new")));
+        // Same for "My orders" (where login sends everyone): the workshop's home is the admin order list.
+        Assert.Equal("/admin", AssertRedirect(await browser.GetAsync("/account")));
+        Assert.DoesNotContain("My orders", page);
 
         // The landing page's "Log out" is a link (GET): it must only ask, never log out by itself.
         Assert.Contains("Log out?", await browser.GetStringAsync("/account/logout"));

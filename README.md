@@ -113,7 +113,7 @@ Before the first real customer:
 
 - [ ] `.env` filled in: `App__PublicBaseUrl`, `AllowedHosts`, admin login, SMTP, Stripe **live** keys, `Alerts__To`
 - [ ] Log in as admin and **change the admin password** to a long one only the workshop knows (two-factor login is optional, but recommended)
-- [ ] Price list set in Admin → Price list (the seeded mods are placeholders)
+- [ ] Price list imported in Admin → Price list (CSV: `brand;model;engine;ecu;price`; the seeded lines are examples)
 - [ ] Email domain verified at the provider (SPF, DKIM, DMARC records), and a test email received
 - [ ] Stripe webhook endpoint added (see `.env.example`), and a test event shows "200" in the Stripe dashboard
 - [ ] One real order end to end with a small amount, then refunded from the admin page
