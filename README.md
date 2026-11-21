@@ -12,7 +12,7 @@ Truck ECU file service. A customer uploads an ECU file, the workshop modifies it
 Requirements: .NET 10 SDK. Nothing else: the database is a SQLite file, emails are written to a folder, and payments use a fake checkout page.
 
 ```powershell
-cd C:\Users\Dalibor\source\repos\core24-ecu
+cd core24-ecu
 dotnet tool restore                     # installs dotnet-ef (pinned in dotnet-tools.json)
 dotnet run --project src/Core24.Web --launch-profile https
 ```
@@ -89,13 +89,20 @@ Files: `Dockerfile` (the app), `docker-compose.yml` (app + Caddy for HTTPS), `Ca
 
 ```bash
 # on the server (Linux, Docker installed, the domain's DNS pointing at it)
-git clone https://github.com/Dalibor98/core24-ecu.git && cd core24-ecu
+git clone <repository-url> && cd core24-ecu
 cp .env.example .env && nano .env     # fill in every value
 docker compose up -d --build
 docker compose logs -f app            # watch it start
 ```
 
-Update to a new version: `git pull && docker compose up -d --build`. The data is in the `app-data` volume and survives this.
+Update to a new version: install `deploy/core24-deploy.sh` on the server once (`scp deploy/core24-deploy.sh root@SERVER:/usr/local/bin/core24-deploy`, then `chmod +x`), then from the repository on your PC, after committing:
+
+```bash
+git archive HEAD | ssh root@SERVER core24-deploy                  # Git Bash
+cmd /c "git archive HEAD | ssh root@SERVER core24-deploy"         # PowerShell (its own pipe breaks binary data)
+```
+
+It builds the new version while the old one keeps running, backs up the database (`/opt/core24-backups`, newest 10), switches, and checks `/health`. If the build fails, nothing changes; if the new version doesn't start, it rolls back to the old code, image and database by itself. The data is in the `app-data` volume and survives updates.
 
 ### Rehearse it on your PC first
 
